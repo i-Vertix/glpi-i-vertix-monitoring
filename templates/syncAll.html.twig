@@ -1,0 +1,71 @@
+{#
+# -------------------------------------------------------------------------
+# Centreon/i-Vertix Monitoring plugin for GLPI
+# -------------------------------------------------------------------------
+#
+# LICENSE
+#
+# This file is part of Centreon/i-Vertix Monitoring.
+#
+# Centreon/i-Vertix Monitoring is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# Centreon/i-Vertix Monitoring is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Centreon/i-Vertix Monitoring. If not, see <http://www.gnu.org/licenses/>.
+# -------------------------------------------------------------------------
+# @copyright Copyright (C) 2022-2023 by Centreon plugin team.
+# @copyright Copyright (C) 2025 by i-Vertix Monitoring plugin team.
+# @license   GPLv3 https://www.gnu.org/licenses/gpl-3.0.html
+# @link      https://github.com/pluginsGLPI/centreon
+# @link      https://github.com/i-Vertix/glpi-i-vertix-monitoring
+# -------------------------------------------------------------------------
+#}
+
+<a href="#" class="btn btn-primary" id="sync">
+    <i class='fas fa-sync me-2' id="icon"></i>
+    {{ current_config["monitoring-sync"] == "1" ? __('Sync all assets to monitoring', 'ivertixmonitoring') }}
+    {{ current_config["monitoring-sync"] == "0" ? __('Link assets to monitoring hosts (internal)', 'ivertixmonitoring') }}
+</a>
+<span class="status status-green" style="display: none;" id="result">
+    <span class="status-dot"></span>
+    <span id="resultContent"></span>
+</span>
+
+<script>
+    $(document).ready(function () {
+        let loading = false;
+        $('#sync').click(function () {
+            if (loading) return;
+            loading = true;
+            $('#icon').addClass("fa-spin");
+            $.ajax({
+                "type": 'POST',
+                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/syncAll.php",
+                "success": function (result) {
+                    console.log('synced all', result);
+                    loading = false;
+                    $('#icon').removeClass("fa-spin");
+                    $('#result').css("display", "inline-block").removeClass("status-red").addClass("status-green");
+                    $('#resultContent').text("Hi, this is the result: " + result);
+                },
+                "error": function (result) {
+                    loading = false;
+                    $('#icon').removeClass("fa-spin");
+                    $('#result').css("display", "inline-block").removeClass("status-green").addClass("status-red");
+                    $('#resultContent').text("An error occurred");
+                    console.log(result);
+                }
+            });
+        });
+    });
+</script>
+
+
+

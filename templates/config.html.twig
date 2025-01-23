@@ -1,0 +1,75 @@
+{#
+# -------------------------------------------------------------------------
+# Centreon/i-Vertix Monitoring plugin for GLPI
+# -------------------------------------------------------------------------
+#
+# LICENSE
+#
+# This file is part of Centreon/i-Vertix Monitoring.
+#
+# Centreon/i-Vertix Monitoring is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# Centreon/i-Vertix Monitoring is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Centreon/i-Vertix Monitoring. If not, see <http://www.gnu.org/licenses/>.
+# -------------------------------------------------------------------------
+# @copyright Copyright (C) 2022-2023 by Centreon plugin team.
+# @copyright Copyright (C) 2025 by i-Vertix Monitoring plugin team.
+# @license   GPLv3 https://www.gnu.org/licenses/gpl-3.0.html
+# @link      https://github.com/pluginsGLPI/centreon
+# @link      https://github.com/i-Vertix/glpi-i-vertix-monitoring
+# -------------------------------------------------------------------------
+#}
+
+{% extends "generic_show_form.html.twig" %}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+{% set field_options = field_options ?? {} %}
+
+{% block form_fields %}
+    {% if can_edit %}
+        <input type="hidden" name="config_context" value="plugin:ivertixmonitoring">
+        <div class="mb-3">
+            <label class="form-label">{{ __("i-Vertix Monitoring API URL") }}</label>
+            <input type="text" class="form-control" name="monitoring-url"
+                   placeholder="https://<fqdn>/centreon/api/v23.10/"
+                   value="{{ current_config['monitoring-url'] }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">{{ __("Monitoring username") }}</label>
+            <input type="text" class="form-control" name="monitoring-username" placeholder="Username"
+                   value="{{ current_config['monitoring-username'] }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">{{ __("Monitoring password") }}</label>
+            <input type="password" class="form-control" name="monitoring-password" placeholder="Password">
+        </div>
+        <div class="mb-3">
+            {{ fields.dropdownYesNo(
+                'monitoring-sync',
+                current_config['monitoring-sync'],
+                __('Sync asset link to monitoring'),
+                field_options
+            ) }}
+        </div>
+        <div class="mb-3">
+            <label class="form-label">{{ __("ITAM base url") }}</label>
+            <input type="text" class="form-control" name="itam-url" placeholder="https://<fqdn>/" id="itam-url"
+                   value="{{ current_config['itam-url'] }}">
+        </div>
+
+        <script>
+            $(document).ready(function () {
+                if ($('#itam-url').val() === "") {
+                    $('#itam-url').val(window.location.origin);
+                }
+            });
+        </script>
+    {% endif %}
+{% endblock %}

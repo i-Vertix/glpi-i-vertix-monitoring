@@ -1,0 +1,109 @@
+{#
+# -------------------------------------------------------------------------
+# Centreon/i-Vertix Monitoring plugin for GLPI
+# -------------------------------------------------------------------------
+#
+# LICENSE
+#
+# This file is part of Centreon/i-Vertix Monitoring.
+#
+# Centreon/i-Vertix Monitoring is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# Centreon/i-Vertix Monitoring is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Centreon/i-Vertix Monitoring. If not, see <http://www.gnu.org/licenses/>.
+# -------------------------------------------------------------------------
+# @copyright Copyright (C) 2022-2023 by Centreon plugin team.
+# @copyright Copyright (C) 2025 by i-Vertix Monitoring plugin team.
+# @license   GPLv3 https://www.gnu.org/licenses/gpl-3.0.html
+# @link      https://github.com/pluginsGLPI/centreon
+# @link      https://github.com/i-Vertix/glpi-i-vertix-monitoring
+# -------------------------------------------------------------------------
+#}
+
+<form id="ack_form">
+    <div class="modal" tabindex="-1" id="ack_modal">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('Acknowledge', 'ivertixmonitoring') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <label class="form-label">{{ __('Comment', 'ivertixmonitoring') }}</label>
+                        <textarea class="form-control" rows="3" id="comment"
+                                  name="comment">{{ __('Acknowledged by ', 'ivertixmonitoring') }}{{ username }}</textarea>
+                    </div>
+                    <div class="my-2">
+                        <label class="form-check">
+                            <input type="hidden" name="is_notify_contacts" value="false">
+                            <input type="checkbox" class="form-check-input" id="is_notify_contacts"
+                                   name="is_notify_contacts" value="true"/>
+                            <span class="form-check-label text-nowrap">
+                            {{ __('Notify', 'ivertixmonitoring') }}
+                        </span>
+                            <span class="fs-6 fst-italic">
+                        {{ __('If checked, a notification is sent to the contacts linked to the object to warn that the incident on the resource has been acknowledged', 'ivertixmonitoring') }}
+                        </span>
+                        </label>
+                    </div>
+                    <div class="my-2">
+                        <label class="form-check">
+                            <input type="hidden" name="is_sticky" value="false">
+                            <input type="checkbox" class="form-check-input" id="is_sticky" name="is_sticky" value="true"
+                                   checked/>
+                            <span class="form-check-label text-nowrap">
+                            {{ __('Sticky', 'ivertixmonitoring') }}
+                        </span>
+                        </label>
+                    </div>
+                    <div class="my-2">
+                        <label class="form-check">
+                            <input type="hidden" name="is_persistent_comment" value="false">
+                            <input type="checkbox" class="form-check-input" id="is_persistent_comment"
+                                   name="is_persistent_comment" value="true" checked/>
+                            <span class="form-check-label text-nowrap">
+                            {{ __('Persistent', 'ivertixmonitoring') }}
+                        </span>
+                        </label>
+                    </div>
+                    <div class="my-2">
+                        <label class="form-check">
+                            <input type="hidden" name="with_services" value="false">
+                            <input type="checkbox" class="form-check-input" id="with_services" name="with_services"
+                                   value="true" checked/>
+                            <span class="form-check-label text-nowrap">
+                            {{ __('Acknowledge services attached to host', 'ivertixmonitoring') }}
+                        </span>
+                        </label>
+                    </div>
+
+
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </a>
+                    <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="ack_ok">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                             stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M12 5l0 14"/>
+                            <path d="M5 12l14 0"/>
+                        </svg>
+                        Acknowledge
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
