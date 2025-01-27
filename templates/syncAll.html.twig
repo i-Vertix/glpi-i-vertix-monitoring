@@ -47,7 +47,7 @@
             $('#icon').addClass("fa-spin");
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/syncAll.php",
+                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/linkAllHosts.php",
                 "success": function (result) {
                     console.log('synced all', result);
                     loading = false;

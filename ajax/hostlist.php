@@ -39,8 +39,13 @@ Html::header_nocache();
 
 Session::checkLoginUser();
 
-Session::checkRight('config', UPDATE);
+Session::checkSeveralRightsOr(['computer' => UPDATE, 'networking' => UPDATE]);
 
-
-$host = new Host();
-echo json_encode("synced " . $host->linkAll() . " assets with i-Vertix Monitoring");
+$hosts = Host::getHostList(
+    $_POST["searchText"] ?? null,
+    isset($_POST["page_limit"]) ? (int)$_POST["page_limit"] : null,
+    isset($_POST["page"]) ? (int)$_POST["page"] : null
+);
+echo json_encode(["results" => array_map(static function ($i) {
+    return ["id" => $i["id"], "text" => $i["name"]];
+}, $hosts)]);

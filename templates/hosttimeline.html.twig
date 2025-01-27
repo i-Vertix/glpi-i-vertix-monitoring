@@ -44,12 +44,14 @@
         $('#t-day').click(function () {
             $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=day&hostid=" + {{ hostid }})
         });
-    });
-    $('#t-week').click(function () {
-        $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=week&hostid=" + {{ hostid }});
-    });
-    $('#t-month').click(function () {
-        $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=month&hostid=" + {{ hostid }});
+        $('#t-week').click(function () {
+            $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=week&hostid=" + {{ hostid }});
+        });
+        $('#t-month').click(function () {
+            $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=month&hostid=" + {{ hostid }});
+        });
 
+        $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=day&hostid=" + {{ hostid }})
     });
+
 </script>

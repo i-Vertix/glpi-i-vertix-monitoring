@@ -28,367 +28,273 @@
 # -------------------------------------------------------------------------
 #}
 
-{% import "components/form/fields_macros.html.twig" as fields %}
 <div class="d-flex flew-row align-items-center py-3 ps-2">
     <h1 class="pe-3 m-0">Host Information</h1>
-    <img class="h-4 d-inline-block" src={{ logo }} alt="lien_centreon">
+    <img class="h-4 d-inline-block" alt="i-vertix monitoring" src="{{ logo }}"/>
     <button type="button" class="btn ms-4 me-1 toggle" id="check">
         <i class="ti ti-refresh"></i>
         <span>{{ __('Check', 'ivertixmonitoring') }}</span>
     </button>
-    <div class="spinner-border text-purple mx-4 d-none toggle" role="status" id="spinner"></div>
     <button type="button" class="btn" id="downtime">
         <i class="ti ti-clock-pause"></i>
         <span>{{ __('Downtime', 'ivertixmonitoring') }}</span>
     </button>
 </div>
-<form id="setdowntime">
-    <div class="modal" tabindex="-1" id="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">{{ __('Set downtime', 'ivertixmonitoring') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body d-flex justify-content-start align-items-center">
-                    <div class="me-3">
-                        <label class="form-check">
-                            <input type="hidden" name="is_fixed" value="false">
-                            <input type="checkbox" class="form-check-input" id="is_fixed" name="is_fixed" value="true"
-                                   checked/>
-                            <span class="form-check-label">{{ __('fixed', 'ivertixmonitoring') }}</span>
-                        </label>
-                    </div>
-                    <div class="flex-column">
-                        <div class="row">
-                            {{ fields.datetimeField('start_time', '', 'From') }}
-                            {{ fields.datetimeField('end_time', '', 'To') }}
-                        </div>
-                        <div class="mt-2" id="duration_select">
-                            <fieldset class="form-fieldset mx-auto w-50">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ __('Duration', 'ivertixmonitoring') }}</label>
-                                    <input type="text" class="form-control" autocomplete="off" name="duration"
-                                           id="duration" placeholder="3600"/>
-                                </div>
-                                <div class="mb-3">
-                                    <select class="form-select" id="time_select" name="time_select">
-                                        <option value="1" selected>{{ __('seconds', 'ivertixmonitoring') }}</option>
-                                        <option value="2">{{ __('minutes', 'ivertixmonitoring') }}</option>
-                                        <option value="3">{{ __('hours', 'ivertixmonitoring') }}</option>
-                                    </select>
-                                </div>
-                            </fieldset>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <label class="form-label">{{ __('Comment', 'ivertixmonitoring') }}</label>
-                        <textarea class="form-control" rows="3" id="comment"
-                                  name="comment">{{ __('Downtime set by ', 'ivertixmonitoring') }}{{ username }}</textarea>
-                    </div>
-                    <div class="my-3">
-                        <label class="form-check">
-                            <input type="hidden" name="with_services" value="false">
-                            <input type="checkbox" class="form-check-input" id="with_services" name="with_services"
-                                   value=true checked/>
-                            <span class="form-check-label text-nowrap">{{ __('Set downtime on services attached to host', 'ivertixmonitoring') }}</span>
-                        </label>
-                    </div>
+<h2 class="p-2 m-0">General</h2>
 
-                </div>
-                <div class="modal-footer">
-                    <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </a>
-                    <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="submit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                             stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                            <path d="M12 5l0 14"/>
-                            <path d="M5 12l14 0"/>
-                        </svg>
-                        Set downtime
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</form>
-<div class="d-flex flex-column">
-    <h2 class="p-2 m-0">General</h2>
-    {% if one_host.in_downtime == true %}
-        {% set indowntime = "true" %}
-        {% set lastdowntimeid = one_host.downtimes.0.id %}
-        <div class="alert alert-warning" role="alert">
-            <h4 class="alert-title mb-1">{{ __('Host in downtime', 'ivertixmonitoring') }}</h4>
-            <div class="d-flex flex-row fst-italic my-2">
-                <div class="me-2">{{ __('From : ', 'ivertixmonitoring') }}{{ one_host.downtimes.0.start_time }}</div>
-                <div>{{ __('To : ', 'ivertixmonitoring') }}{{ one_host.downtimes.0.end_time }}</div>
-            </div>
-            <div>{{ __('Author name : ', 'ivertixmonitoring') }}{{ one_host.downtimes.0.author_name }}</div>
-            <div>{{ __('Comment : ', 'ivertixmonitoring') }}{{ one_host.downtimes.0.comment }}</div>
-            <a href="#" class="btn mt-2" id="cancel_d">{{ __('Cancel', 'ivertixmonitoring') }}</a>
-        </div>
-    {% endif %}
-</div>
-
+{% include '@ivertixmonitoring/downtimeModal.html.twig' %}
 {% include '@ivertixmonitoring/ackModal.html.twig' %}
 
-{% if one_host.in_downtime == false %}
-{% set indowntime = "false" %}
 <div class="datagrid container text-center my-2">
-    {% elseif one_host.in_downtime == true %}
-    <div class="datagrid container text-center my-2 bg-blue-lt rounded-3">
-        {% endif %}
-        <div class="row">
-            <div class="col">
-                <div class="datagrid-item">
-                    <div class="datagrid-title fw-bold">{{ __("Status") }}</div>
-                    <div class="datagrid-content mt-2">
-                        {% if one_host.status == 'UP' %}
-                            <span class="status status-green">
-                        {{ one_host.status }}
+    <div class="row">
+        <div class="col">
+            <div class="datagrid-item">
+                <div class="datagrid-title fw-bold">{{ __("Status") }}</div>
+                <div class="datagrid-content mt-2">
+                    {% if host.status == 'UP' %}
+                        <span class="status status-green">
+                        {{ host.status }}
                         </span>
-                        {% elseif one_host.status == 'DOWN' %}
-                            <div class="btn-group" role="group" aria-label="Basic example">
-                                <button type="button"
-                                        class="btn btn-primary disabled">{{ __('DOWN', 'ivertixmonitoring') }}</button>
-                                <button type="button" class="btn btn-primary"
-                                        id="ack">{{ __('ACK', 'ivertixmonitoring') }}</button>
-                            </div>
-                        {% else %}
-                            <span class="status status-orange">
-                        {{ one_host.status }}
+                    {% elseif host.status == 'DOWN' %}
+                        <span class="status status-red">
+                            {{ host.status }}
                         </span>
-                        {% endif %}
+                        <button type="button" class="btn mt-1" id="ack">
+                            <i class="ti ti-user"></i>
+                            <span>{{ __('Acknowledge', 'ivertixmonitoring') }}</span>
+                        </button>
+                    {% else %}
+                        <span class="status status-orange">
+                        {{ host.status }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="datagrid-item">
+                <div class="datagrid-title fw-bold">{{ __("Name") }}</div>
+                <div class="datagrid-content mt-2">{{ host.name }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="datagrid-item">
+                <div class="datagrid-title fw-bold">{{ __("Alias") }}</div>
+                <div class="datagrid-content mt-2">{{ host.alias }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="datagrid-item">
+                <div class="datagrid-title fw-bold">{{ __("FQDN") }}</div>
+                <div class="datagrid-content mt-2">{{ host.fqdn }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="datagrid-item">
+                <div class="datagrid-title fw-bold">{{ __("Last check") }}</div>
+                <div class="datagrid-content mt-2">{{ host.last_check }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="datagrid-item">
+                <div class="datagrid-title fw-bold">{{ __("Next check") }}</div>
+                <div class="datagrid-content mt-2">{{ host.next_check }}</div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="datagrid-item">
+                <div class="datagrid-title fw-bold">{{ __("Check period") }}</div>
+                <div class="datagrid-content mt-2">{{ host.check_period }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if host.in_downtime == true %}
+    <div class="row row-deck p-2 mb-2">
+        {% for downtime in host["downtimes"] %}
+            <div class="col-md-4">
+                <div class="card mt-3" style="max-height: 200px;">
+                    <div class="card-status-start bg-red"></div>
+                    <div class="card-body">
+                        <h3 class="card-title m-0 text-truncate">{{ __('Host in downtime', 'ivertixmonitoring') }}</h3>
+                        <div>{{ __('From : ', 'ivertixmonitoring') }}{{ host.downtimes.0.start_time }}</div>
+                        <div>{{ __('To : ', 'ivertixmonitoring') }}{{ host.downtimes.0.end_time }}</div>
+                        <div>{{ __('Author name : ', 'ivertixmonitoring') }}{{ host.downtimes.0.author_name }}</div>
+                        <div>{{ __('Comment : ', 'ivertixmonitoring') }}{{ host.downtimes.0.comment }}</div>
+                        <button class="btn mt-2"
+                                id="cancel_downtime_{{ downtime.id }}">{{ __('Cancel', 'ivertixmonitoring') }}</button>
                     </div>
                 </div>
             </div>
-            <div class="col">
-                <div class="datagrid-item">
-                    <div class="datagrid-title fw-bold">{{ __("Name") }}</div>
-                    <div class="datagrid-content mt-2">{{ one_host.name }}</div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="datagrid-item">
-                    <div class="datagrid-title fw-bold">{{ __("Alias") }}</div>
-                    <div class="datagrid-content mt-2">{{ one_host.alias }}</div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="datagrid-item">
-                    <div class="datagrid-title fw-bold">{{ __("FQDN") }}</div>
-                    <div class="datagrid-content mt-2">{{ one_host.fqdn }}</div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="datagrid-item">
-                    <div class="datagrid-title fw-bold">{{ __("Last check") }}</div>
-                    <div class="datagrid-content mt-2">{{ one_host.last_check }}</div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="datagrid-item">
-                    <div class="datagrid-title fw-bold">{{ __("Next check") }}</div>
-                    <div class="datagrid-content mt-2">{{ one_host.next_check }}</div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="datagrid-item">
-                    <div class="datagrid-title fw-bold">{{ __("Check period") }}</div>
-                    <div class="datagrid-content mt-2">{{ one_host.check_period }}</div>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
     </div>
+{% endif %}
 
-    <div class="card border-0">
-        <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
-                <li class="nav-item">
-                    <a href="#tabs-services-ex1" class="nav-link active" data-bs-toggle="tab">{{ __("Services") }}</a>
-                </li>
-                <li class="nav-item">
-                    <a href="#tabs-historique-ex1" class="nav-link" data-bs-toggle="tab">{{ __("Timeline") }}</a>
-                </li>
-            </ul>
-        </div>
+<div class="card border-0">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+            <li class="nav-item">
+                <a href="#tabs-services-ex1" class="nav-link active" data-bs-toggle="tab">{{ __("Services") }}</a>
+            </li>
+            <li class="nav-item">
+                <a href="#tabs-historique-ex1" class="nav-link" data-bs-toggle="tab">{{ __("Timeline") }}</a>
+            </li>
+        </ul>
     </div>
+</div>
 
-    <div class="card-body">
-        <div class="tab-content">
-            <div class="tab-pane active show" id="tabs-services-ex1">
-                <div class="d-flex flew-row align-items-center p-2 mt-3">
-                    <h2 class="pe-3 m-0">{{ __("Services") }}</h2>
-                    {% set count_ok = 0 %}
-                    {% set count_w = 0 %}
-                    {% set count_d = 0 %}
-                    {% set count_un = 0 %}
-                    {% for service in one_host["services"] %}
-                        {% if service.status.name == "OK" %}
-                            {% set count_ok = count_ok + 1 %}
-                        {% elseif service.status.name == "WARNING" %}
-                            {% set count_w = count_w + 1 %}
-                        {% elseif service.status.name == "CRITICAL" %}
-                            {% set count_d = count_d + 1 %}
-                        {% else %}
-                            {% set count_un = count_un + 1 %}
-                        {% endif %}
-                    {% endfor %}
-                    <div class="d-flex align-items-center">
+<div class="card-body">
+    <div class="tab-content">
+        <div class="tab-pane active show" id="tabs-services-ex1">
+            <div class="d-flex flew-row align-items-center p-2 mt-3">
+                <h2 class="pe-3 m-0">{{ __("Services") }}</h2>
+                {% set count_ok = 0 %}
+                {% set count_w = 0 %}
+                {% set count_d = 0 %}
+                {% set count_un = 0 %}
+                {% for service in host["services"] %}
+                    {% if service.status.name == "OK" %}
+                        {% set count_ok = count_ok + 1 %}
+                    {% elseif service.status.name == "WARNING" %}
+                        {% set count_w = count_w + 1 %}
+                    {% elseif service.status.name == "CRITICAL" %}
+                        {% set count_d = count_d + 1 %}
+                    {% else %}
+                        {% set count_un = count_un + 1 %}
+                    {% endif %}
+                {% endfor %}
+                <div class="d-flex align-items-center">
                         <span class="badge bg-teal m-1" title="OK" data-bs-toggle="tooltip"
                               data-bs-placement="top">{{ count_ok }}</span>
-                        <span class="badge bg-orange m-1" title="WARNING" data-bs-toggle="tooltip"
-                              data-bs-placement="top">{{ count_w }}</span>
-                        <span class="badge bg-red m-1" title="CRITICAL" data-bs-toggle="tooltip"
-                              data-bs-placement="top">{{ count_d }}</span>
-                        <span class="badge bg-grey m-1" title="UNKNOWN" data-bs-toggle="tooltip"
-                              data-bs-placement="top">{{ count_un }}</span>
-                    </div>
+                    <span class="badge bg-orange m-1" title="WARNING" data-bs-toggle="tooltip"
+                          data-bs-placement="top">{{ count_w }}</span>
+                    <span class="badge bg-red m-1" title="CRITICAL" data-bs-toggle="tooltip"
+                          data-bs-placement="top">{{ count_d }}</span>
+                    <span class="badge bg-grey m-1" title="UNKNOWN" data-bs-toggle="tooltip"
+                          data-bs-placement="top">{{ count_un }}</span>
                 </div>
+            </div>
 
-                <div class="row row-deck p-2 mb-2">
-                    {% for service in one_host["services"] %}
+            <div class="row row-deck p-2 mb-2">
+                {% for service in host["services"] %}
+                    {% set color = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "grey" : "blue" %}
+                    {% set bgcolor = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "secondary" : "blue" %}
                     <div class="col-md-4">
                         <div class="card mt-3" style="max-height: 200px;">
-                            {% if service.status.name == "OK" %}
-                            <div class="card-status-start bg-green"></div>
+                            <div class="card-status-start bg-{{ bgcolor }}"></div>
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <span class="status status-green">{{ service.status.name }}</span>
+                                    <span class="status status-{{ color }}">{{ service.status.name }}</span>
                                     <h3 class="card-title m-0 px-2 text-truncate">{{ service["display_name"] }}</h3>
                                 </div>
-                                {% elseif service.status.name == "WARNING" %}
-                                <div class="card-status-start bg-orange"></div>
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center">
-                                        <span class="status status-orange">{{ service.status.name }}</span>
-                                        <h3 class="card-title m-0 px-2 text-truncate">{{ service["display_name"] }}</h3>
-                                    </div>
-                                    {% elseif service.status.name == "CRITICAL" %}
-                                    <div class="card-status-start bg-red"></div>
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center">
-                                            <span class="status status-red">{{ service.status.name }}</span>
-                                            <h3 class="card-title m-0 px-2 text-truncate">{{ service["display_name"] }}</h3>
-                                        </div>
-                                        {% else %}
-                                        <div class="card-status-start bg-secondary"></div>
-                                        <div class="card-body">
-                                            <div class="d-flex align-items-center">
-                                                <span class="status status-grey">{{ service.status.name }}</span>
-                                                <h3 class="card-title m-0 px-2 text-truncate">{{ service["display_name"] }}</h3>
-                                            </div>
-                                            {% endif %}
-                                            <div class="d-flex justify-content-between">
-                                                <code class="m-0 mt-3"> {{ service["output"] }} </code>
-                                                <code class="text-nowrap m-0 mt-3 ms-2"> {{ service["duration"] }} </code>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="d-flex justify-content-between">
+                                    <code class="m-0 mt-3"> {{ service["output"] }} </code>
+                                    <code class="text-nowrap m-0 mt-3 ms-2"> {{ service["duration"] }} </code>
                                 </div>
-                                {% endfor %}
                             </div>
                         </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
 
-                        <div class="tab-pane" id="tabs-historique-ex1">
-                            {% include '@ivertixmonitoring/hosttimeline.html.twig' %}
-                        </div>
+        <div class="tab-pane" id="tabs-historique-ex1">
+            {% include '@ivertixmonitoring/hosttimeline.html.twig' %}
+        </div>
+    </div>
+</div>
 
-                        <script>
-                            $(document).ready(function () {
-                                $('#check').click(function () {
-                                    $('.toggle').toggleClass('d-none');
-                                    $.post(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/sendCheck.php?hostid=" + {{ hostid }}, function (response) {
-                                        reloadTab('');
-                                        $('#check').addClass('btn-lime');
-                                        $('.toggle').toggleClass('d-none');
-                                    })
-                                });
-                                $('#downtime').click(function () {
-                                    $('#duration_select').hide();
-                                    $('#dialog').modal('show');
-                                });
-                                $('#is_fixed').click(function () {
-                                    $('#duration_select').toggle();
-                                });
-                                $('#submit').click(function () {
-                                    var textarea = $.trim($('#comment').val());
-                                    if (textarea != "") {
-                                        $('#comment').val(textarea);
-                                    }
+<script>
+    $(document).ready(function () {
+        $('#check').click(function () {
+            $('.toggle').toggleClass('d-none');
+            $.post(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/sendCheck.php?hostid=" + {{ hostid }}, function (response) {
+                reloadTab('');
+                $('#check').addClass('btn-lime');
+                $('.toggle').toggleClass('d-none');
+            });
+        });
+        $('#downtime').click(function () {
+            $('#duration_select').hide();
+            $('#dialog').modal('show');
+        });
+        $('#is_fixed').click(function () {
+            $('#duration_select').toggle();
+        });
+        $('#submit').click(function () {
+            var textarea = $.trim($('#comment').val());
+            if (textarea != "") {
+                $('#comment').val(textarea);
+            }
 
-                                    var params = $('#setdowntime').serializeArray();
-                                    var flatparams = {};
-                                    $.each(params, function () {
-                                        if (this.name.includes('time')) {
-                                            var date = new Date(this.value);
-                                            this.value = date.toISOString();
-                                        }
-                                        flatparams[this.name] = this.value;
-                                    });
-                                    $.ajax({
-                                        "type": 'POST',
-                                        "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/setDowntime.php",
-                                        "data": {
-                                            "hostid": {{ hostid }},
-                                            "params": flatparams
-                                        },
-                                        "success": function (result) {
-                                            console.log('downtime envoyé');
-                                            reloadTab('');
-                                        }
-                                    });
-                                });
-                                $('#ack').click(function () {
-                                    $('#ack_modal').modal('show');
-                                });
-                                $('#ack_ok').click(function () {
-                                    var params = $('#ack_form').serializeArray();
-                                    var flatparams = {};
-                                    $.each(params, function () {
-                                        flatparams[this.name] = this.value;
-                                    });
-                                    console.log(params);
-                                    $.ajax({
-                                        "type": 'POST',
-                                        "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/ack.php",
-                                        "data": {
-                                            "hostid": {{ hostid }},
-                                            "params": flatparams
-                                        },
-                                        "success": function (data) {
-                                            reloadTab('');
-                                            console.log('acknowledge ok');
-                                            console.log(data);
-                                        }
-                                    });
-                                })
+            var params = $('#setdowntime').serializeArray();
+            var flatparams = {};
+            $.each(params, function () {
+                if (this.name.includes('time')) {
+                    var date = new Date(this.value);
+                    this.value = date.toISOString();
+                }
+                flatparams[this.name] = this.value;
+            });
+            $.ajax({
+                "type": 'POST',
+                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/setDowntime.php",
+                "data": {
+                    "hostid": {{ hostid }},
+                    "params": flatparams
+                },
+                "success": function (result) {
+                    console.log('downtime envoyé');
+                    reloadTab('');
+                }
+            });
+        });
+        $('#ack').click(function () {
+            $('#ack_modal').modal('show');
+        });
+        $('#ack_ok').click(function () {
+            var params = $('#ack_form').serializeArray();
+            var flatparams = {};
+            $.each(params, function () {
+                flatparams[this.name] = this.value;
+            });
+            console.log(params);
+            $.ajax({
+                "type": 'POST',
+                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/ack.php",
+                "data": {
+                    "hostid": {{ hostid }},
+                    "params": flatparams
+                },
+                "success": function (data) {
+                    reloadTab('');
+                    console.log('acknowledge ok');
+                    console.log(data);
+                }
+            });
+        });
 
-                                if ({{ indowntime }} == true
-                            )
-                                {
-                                    $('#cancel_d').click(function () {
-                                        console.log({{ one_host.in_downtime }});
-                                        $.ajax({
-                                            "type": 'POST',
-                                            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/cancelDowntime.php",
-                                            "data": {
-                                                "downtimeid": {{ lastdowntimeid ?? 0 }},
-                                            },
-                                            "success": function () {
-                                                reloadTab('');
-                                                console.log('downtime annulé');
-                                            }
-                                        });
-                                    });
-                                }
-                                $(document).on('submit', '#setdowntime', function (event) {
-                                    event.preventDefault();
-                                });
-                            });
-                        </script>
+        {% for downtime in host["downtimes"] %}
+        $('#cancel_downtime_{{ downtime.id }}').click(function () {
+            console.log("dican");
+            $.ajax({
+                "type": 'POST',
+                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/cancelDowntime.php",
+                "data": {
+                    "item_id": {{ item_id }},
+                    "itemtype": "{{ itemtype }}",
+                    "downtime_id": {{ downtime.id }}
+                },
+                "success": function (data) {
+                    glpi_toast_info("{{ __('It may take some time for the downtime to disappear', 'ivertixmonitoring') }}", "{{ __('Downtime canceled', 'ivertixmonitoring') }}");
+                }
+            });
+        });
+        {% endfor %}
+
+        $(document).on('submit', '#setdowntime', function (event) {
+            event.preventDefault();
+        });
+    });
+</script>

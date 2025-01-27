@@ -104,7 +104,7 @@ class HostTest extends TestCase
         //     ->getMock();
 
         $new_host = new Host($api);
-        $result   = $new_host->getHostById($id);
+        $result   = $new_host->getHostDetail($id);
 
         $this->assertIsArray($result);
     }

@@ -41,7 +41,7 @@ class ApiClient
     public ?array $auth = null;
     public array $api_config = [];
 
-    public function monitoringConfig()
+    public function monitoringConfig(): void
     {
         $api_i = new Config();
         $this->api_config = $api_i::getConfig();
@@ -50,16 +50,20 @@ class ApiClient
     public function getAuthUser(): ?array
     {
         $connected = $this->authenticate();
-        if (!$connected) return null;
+        if (!$connected) {
+            return null;
+        }
         return ["id" => $this->auth["contact_id"], "name" => $this->auth["contact_name"]];
     }
 
-    public function authenticate(array $params = [])
+    public function authenticate(): bool
     {
-        if (isset($this->auth)) return true;
+        if (isset($this->auth)) {
+            return true;
+        }
         $this->monitoringConfig();
 
-        $defaults = [
+        $params = [
             'json' => [
                 'security' => [
                     'credentials' => [
@@ -69,16 +73,10 @@ class ApiClient
                 ],
             ],
         ];
-        $params = array_replace_recursive($defaults, $params);
 
-        try {
-            $data = $this->clientRequest('login', $params, 'POST');
-        } catch (\Exception $e) {
-            if (isset($params['throw'])) {
-                throw $e;
-            }
-
-            return $e->getMessage();
+        $data = $this->clientRequest('login', $params, 'POST');
+        if (!isset($data["security"]["token"])) {
+            return false;
         }
         $this->auth = [
             "token" => $data['security']['token'],
@@ -89,7 +87,7 @@ class ApiClient
         return true;
     }
 
-    public function diagnostic()
+    public function diagnostic(): array
     {
         $test = $this->authenticate();
 
@@ -127,35 +125,34 @@ class ApiClient
         try {
             $data = $api_client->request($method, $endpoint, $params);
         } catch (\Exception $e) {
-            if (isset($params['throw'])) {
-                throw $e;
-            }
             return $e->getMessage();
         }
         $data_body = $data->getBody();
         return json_decode($data_body, true);
     }
 
-    public function getHosts(array $params = [])
+    public function getHosts(array $query = null)
     {
-        $defaults = [];
-        $params = array_replace_recursive($defaults, $params);
+        $params = [];
+        if (isset($query)) {
+            $params["query"] = $query;
+        }
         return $this->clientRequest('monitoring/hosts', $params);
     }
 
-    public function getHostById(int $host_id, array $params = []): array
+    public function getHostById(int $hostId): array
     {
-        return $this->clientRequest('monitoring/hosts/' . $host_id, $params);
+        return $this->clientRequest('monitoring/hosts/' . $hostId);
     }
 
-    public function getHostResourceDetailById(int $host_id, array $params = []): array
+    public function getHostResourceDetailById(int $hostId): array
     {
-        return $this->clientRequest('monitoring/resources/hosts/' . $host_id, $params);
+        return $this->clientRequest('monitoring/resources/hosts/' . $hostId);
     }
 
-    public function getHostTimelineById(int $host_id, array $params = []): array
+    public function getHostTimelineById(int $hostId): array
     {
-        return $this->clientRequest('monitoring/hosts/' . $host_id . '/timeline', $params);
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/timeline');
     }
 
     public function getServicesList(array $params = []): array
@@ -163,62 +160,63 @@ class ApiClient
         return $this->clientRequest('monitoring/services', $params);
     }
 
-    public function getServicesByHostId(int $host_id, array $params = [])
+    public function getServicesByHostId(int $hostId, int $limit = 30)
     {
-        $params['query'] = ['limit' => 30];
-        return $this->clientRequest('monitoring/hosts/' . $host_id . '/services', $params);
+        $params['query'] = ['limit' => $limit];
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/services', $params);
     }
 
-    public function sendHostCheck(int $host_id, array $params = [])
+    public function sendHostCheck(int $hostId, bool $isForced = true)
     {
-        $params['json']['is_forced'] = true;
-        return $this->clientRequest('monitoring/hosts/' . $host_id . '/check', $params['json'], 'POST');
+        $params['json']['is_forced'] = $isForced;
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/check', $params, 'POST');
     }
 
-    public function setHostDowntime(int $host_id, array $params)
+    public function setHostDowntime(int $hostId, array $downtime)
     {
-        return $this->clientRequest('monitoring/hosts/' . $host_id . '/downtimes', $params, 'POST');
+        $params["json"] = $downtime;
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes', $params, 'POST');
     }
 
-    public function getHostDowntimes(int $host_id, array $params = [])
+    public function getHostDowntimes(int $hostId)
     {
-        return $this->clientRequest('monitoring/hosts/' . $host_id . '/downtimes', $params);
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes');
     }
 
-    public function getDowntimeById(int $downtime_id): array
+    public function getDowntimeById(int $downtimeId): array
     {
-        return $this->clientRequest('monitoring/downtimes/' . $downtime_id);
+        return $this->clientRequest('monitoring/downtimes/' . $downtimeId);
     }
 
-    public function getServiceDowntimesByHostId(int $host_id, array $params = [])
+    public function getServiceDowntimesByHostId(int $hostId)
     {
-        $defaultParams = [
+        $params = [
             'query' => [
                 'search' => json_encode([
                     'host.id' => [
-                        '$eq' => $host_id,
+                        '$eq' => $hostId,
                     ],
                 ]),
             ],
         ];
 
-        $queryParams = array_merge($defaultParams, $params);
-
-        return $this->clientRequest('monitoring/services/downtimes', $queryParams);
+        return $this->clientRequest('monitoring/services/downtimes', $params);
     }
 
-    public function cancelDowntimeById(int $downtime_id, array $params = [])
+    public function cancelDowntimeById(int $downtimeId)
     {
-        return $this->clientRequest('monitoring/downtimes/' . $downtime_id, $params, 'DELETE');
+        return $this->clientRequest('monitoring/downtimes/' . $downtimeId, [], 'DELETE');
     }
 
-    public function acknowledgeHostById(int $host_id, array $request = [])
+    public function acknowledgeHostById(int $hostId, array $acknowledge)
     {
-        return $this->clientRequest('monitoring/hosts/' . $host_id . 'acknowledgements', $request, 'POST');
+        $params["json"] = $acknowledge;
+        return $this->clientRequest('monitoring/hosts/' . $hostId . 'acknowledgements', $params, 'POST');
     }
 
-    public function updateHost(int $host_id, array $request = [])
+    public function updateHost(int $hostId, array $hostFields)
     {
-        return $this->clientRequest('configuration/hosts/' . $host_id, $request, 'PATCH');
+        $params["json"] = $hostFields;
+        return $this->clientRequest('configuration/hosts/' . $hostId, $hostFields, 'PATCH');
     }
 }

@@ -30,18 +30,20 @@
  * -------------------------------------------------------------------------
  */
 
+use Glpi\Http\Response;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 include('../../../inc/includes.php');
 
-header('Content-Type: text/html; charset=UTF-8');
+header("Content-Type: application/json; charset=UTF-8");
 Html::header_nocache();
 
-//Session::checkRight('computer', UPDATE);
+Session::checkLoginUser();
 
+$host = new Host();
+$hostId = $_POST["host_id"] ?? null;
 $itemId = $_POST["item_id"] ?? null;
 $itemType = $_POST["itemtype"] ?? null;
-
 
 if (!isset($itemType)) {
     Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
@@ -53,17 +55,25 @@ if (!isset($itemId) || !is_numeric($itemId)) {
     $itemId = (int)Toolbox::cleanInteger($itemId);
 }
 
+if ($hostId === "") {
+    $hostId = null;
+} else if (is_numeric($hostId)) {
+    $hostId = (int)Toolbox::cleanInteger($hostId);
+} else {
+    Response::sendError(400, "Missing parameter: 'host_id'");
+}
+
 $item = getItemForItemtype($itemType);
 if ($item === false) {
     Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
-} else if ($item->can($itemId, UPDATE)) {
+} else if (!$item->can($itemId, UPDATE)) {
     Response::sendError(404, __("You don't have permission to perform this action."));
 }
 
-$host  = new Host();
-if ($host->isItemLinked($itemId, $itemType)) {
-    // todo: acknowledge
-    $host->acknowledge();
-} else {
-    Response::sendError(404, "No linked monitoring host found for item");
+$success = $host->linkItemToMonitoringHostByHostId($itemId, $itemType, $hostId);
+
+if (!$success) {
+    Response::sendError(404, __("linking host failed"));
 }
+
+echo json_encode($hostId !== null ? $host->fields : "link to host removed");

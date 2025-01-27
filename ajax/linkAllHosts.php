@@ -34,36 +34,15 @@ use GlpiPlugin\Ivertixmonitoring\Host;
 
 include('../../../inc/includes.php');
 
-header('Content-Type: text/html; charset=UTF-8');
+header("Content-Type: application/json; charset=UTF-8");
 Html::header_nocache();
 
-//Session::checkRight('computer', UPDATE);
+Session::checkLoginUser();
 
-$itemId = $_POST["item_id"] ?? null;
-$itemType = $_POST["itemtype"] ?? null;
+Session::checkRight('config', UPDATE);
+Session::checkRight('computer', UPDATE);
+Session::checkRight('networking', UPDATE);
 
 
-if (!isset($itemType)) {
-    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
-}
-
-if (!isset($itemId) || !is_numeric($itemId)) {
-    Response::sendError(400, "Missing or invalid parameter: 'item_id'");
-} else {
-    $itemId = (int)Toolbox::cleanInteger($itemId);
-}
-
-$item = getItemForItemtype($itemType);
-if ($item === false) {
-    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
-} else if ($item->can($itemId, UPDATE)) {
-    Response::sendError(404, __("You don't have permission to perform this action."));
-}
-
-$host  = new Host();
-if ($host->isItemLinked($itemId, $itemType)) {
-    // todo: acknowledge
-    $host->acknowledge();
-} else {
-    Response::sendError(404, "No linked monitoring host found for item");
-}
+$host = new Host();
+echo json_encode("synced " . $host->linkAll() . " assets with i-Vertix Monitoring");

@@ -58,18 +58,5 @@
                 field_options
             ) }}
         </div>
-        <div class="mb-3">
-            <label class="form-label">{{ __("ITAM base url") }}</label>
-            <input type="text" class="form-control" name="itam-url" placeholder="https://<fqdn>/" id="itam-url"
-                   value="{{ current_config['itam-url'] }}">
-        </div>
-
-        <script>
-            $(document).ready(function () {
-                if ($('#itam-url').val() === "") {
-                    $('#itam-url').val(window.location.origin);
-                }
-            });
-        </script>
     {% endif %}
 {% endblock %}

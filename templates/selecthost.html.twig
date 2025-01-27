@@ -28,6 +28,33 @@
 # -------------------------------------------------------------------------
 #}
 
-<div class="container p-3 my-3">
-    <span class="alert alert-warning">{{ __("No i-Vertix Monitoring host is linked to this item") }}</span>
+<script>
+    const onHostChange = (e) => {
+        const selected = $(`#${e.currentTarget.id}`).select2('data')[0]?.id;
+        // link host using ajax post
+        $.ajax({
+            "type": 'POST',
+            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/linkSingleHost.php",
+            "data": {
+                "host_id": selected ?? "",
+                "itemtype": "{{ itemtype }}",
+                "item_id": {{ item_id }}
+            },
+            "success": function (result) {
+                console.log('item linked to host:', result);
+                $(`#${e.currentTarget.id}`).select2('close');
+                reloadTab();
+            },
+            "error": function (result) {
+                console.log('linking failed:', result);
+                $(`#${e.currentTarget.id}`).select2('close');
+                reloadTab();
+            }
+        });
+    }
+</script>
+
+<div class="d-flex flew-row align-items-center py-3 ps-2">
+    <label class="form-label pe-3 m-0" for="{{ host_dropdown_id }}">{{ __('Linekd host', 'ivertixmonitoring') }}</label>
+    {{ host_dropdown|raw }}
 </div>
