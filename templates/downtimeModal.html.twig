@@ -29,78 +29,136 @@
 #}
 
 {% import "components/form/fields_macros.html.twig" as fields %}
-<form id="setdowntime">
-    <div class="modal" tabindex="-1" id="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
+<div class="modal fade" tabindex="-1" role="dialog" id="modal-downtime">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form id="form-set-downtime">
+                <div class="modal-status bg-purple"></div>
                 <div class="modal-header">
                     <h5 class="modal-title">{{ __('Set downtime', 'ivertixmonitoring') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <a type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></a>
                 </div>
-                <div class="modal-body d-flex justify-content-start align-items-center">
-                    <div class="me-3">
-                        <label class="form-check">
-                            <input type="hidden" name="is_fixed" value="false">
-                            <input type="checkbox" class="form-check-input" id="is_fixed" name="is_fixed" value="true"
-                                   checked/>
-                            <span class="form-check-label">{{ __('fixed', 'ivertixmonitoring') }}</span>
-                        </label>
+                <div class="modal-body">
+                    <div class="row" id="downtime-time">
+                        {{ fields.datetimeField('start_time', '', 'From') }}
+                        {{ fields.datetimeField('end_time', '', 'To') }}
                     </div>
-                    <div class="flex-column">
-                        <div class="row">
-                            {{ fields.datetimeField('start_time', '', 'From') }}
-                            {{ fields.datetimeField('end_time', '', 'To') }}
+                    <div class="row align-items-center" style="min-height: 36px">
+                        <div class="row col-auto">
+                            <label class="form-check m-0">
+                                <input type="hidden" name="is_fixed" value="false">
+                                <input type="checkbox" class="form-check-input" id="downtime-is-fixed" name="is_fixed"
+                                       value="true"
+                                       checked/>
+                                <span class="form-check-label">{{ __('fixed', 'ivertixmonitoring') }}</span>
+                            </label>
                         </div>
-                        <div class="mt-2" id="duration_select">
-                            <fieldset class="form-fieldset mx-auto w-50">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ __('Duration', 'ivertixmonitoring') }}</label>
-                                    <input type="text" class="form-control" autocomplete="off" name="duration"
-                                           id="duration" placeholder="3600"/>
-                                </div>
-                                <div class="mb-3">
-                                    <select class="form-select" id="time_select" name="time_select">
-                                        <option value="s" selected>{{ __('seconds', 'ivertixmonitoring') }}</option>
-                                        <option value="m">{{ __('minutes', 'ivertixmonitoring') }}</option>
-                                        <option value="h">{{ __('hours', 'ivertixmonitoring') }}</option>
-                                    </select>
-                                </div>
-                            </fieldset>
+                        <div class="row col-auto downtime-duration">
+                            <label class="col-form-label col-auto"
+                                   for="downtime-duration-value">{{ __('Duration', 'ivertixmonitoring') }}</label>
+                            <input type="text" class="form-control col mx-1" autocomplete="off" name="duration_value"
+                                   id="downtime-duration-value" placeholder="3600"/>
+                        </div>
+                        <div class="row col-auto downtime-duration">
+                            <select class="form-select" id="downtime-duration-unit" name="duration_unit">
+                                <option value="s">{{ __('seconds', 'ivertixmonitoring') }}</option>
+                                <option value="m">{{ __('minutes', 'ivertixmonitoring') }}</option>
+                                <option value="h">{{ __('hours', 'ivertixmonitoring') }}</option>
+                            </select>
                         </div>
                     </div>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <label class="form-label">{{ __('Comment', 'ivertixmonitoring') }}</label>
-                        <textarea class="form-control" rows="3" id="comment"
-                                  name="comment">{{ __('Downtime set by ', 'ivertixmonitoring') }}{{ username }}</textarea>
+                        <label class="form-label"
+                               for="downtime-comment">{{ __('Comment', 'ivertixmonitoring') }}</label>
+                        <textarea class="form-control" rows="3" id="downtime-comment"
+                                  name="comment"></textarea>
                     </div>
                     <div class="my-3">
                         <label class="form-check">
                             <input type="hidden" name="with_services" value="false">
-                            <input type="checkbox" class="form-check-input" id="with_services" name="with_services"
+                            <input type="checkbox" class="form-check-input" id="downtime-with-services"
+                                   name="with_services"
                                    value=true checked/>
                             <span class="form-check-label text-nowrap">{{ __('Set downtime on services attached to host', 'ivertixmonitoring') }}</span>
                         </label>
                     </div>
-
                 </div>
                 <div class="modal-footer">
-                    <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </a>
-                    <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="submit">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                             stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                            <path d="M12 5l0 14"/>
-                            <path d="M5 12l14 0"/>
-                        </svg>
-                        Set downtime
-                    </a>
+                    <div class="w-100">
+                        <div class="d-flex justify-content-between">
+                            <a href="#" class="btn" data-bs-dismiss="modal">
+                                {{ __('Cancel') }}
+                            </a>
+                            <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="submit-downtime">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                     viewBox="0 0 24 24"
+                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M12 5l0 14"/>
+                                    <path d="M5 12l14 0"/>
+                                </svg>
+                                {{ __('Set downtime', 'ivertixmonitoring') }}
+                            </a>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
-</form>
+</div>
+
+<script>
+    debugger;
+
+    const resetDowntimeModal = () => {
+        $("#form-set-downtime").trigger("reset");
+        $('.downtime-duration').hide();
+        $("#downtime-is-fixed").prop("checked", true);
+        $("#downtime-with-services").prop("checked", true);
+        $("#downtime-duration-value").val('');
+        $("#downtime-duration-unit").val('s');
+        $("#downtime-comment").val("{{ __('Downtime set by ', 'ivertixmonitoring') }}{{ user_name }}");
+    }
+
+    $('#downtime-is-fixed').click(function () {
+        $('.downtime-duration').toggle();
+    });
+
+    $('#submit-downtime').click(function () {
+        let textarea = $.trim($('#downtime-comment').val());
+        if (textarea !== "") {
+            $('#downtime-comment').val(textarea);
+        }
+
+        const params = $('#form-set-downtime').serializeArray();
+        const data = {};
+        $.each(params, function () {
+            let val = this.value;
+            if (this.name.includes('time')) {
+                const date = new Date(this.value);
+                val = date.toISOString();
+            }
+            data[this.name] = val;
+        });
+        $.ajax({
+            "type": 'POST',
+            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
+                + "/ajax/setDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "data": data,
+            "success": function (result) {
+                glpi_toast_info("{{ __('It may take some time for the downtime to appear', 'ivertixmonitoring') }}", "{{ __('Downtime set', 'ivertixmonitoring') }}");
+            },
+            "error": function (result) {
+                glpi_toast_error("{{ __('Failed to set the downtime', 'ivertixmonitoring') }}");
+            }
+        });
+    });
+
+    $(document).on('submit', '#form-set-downtime', function (event) {
+        event.preventDefault();
+    });
+
+</script>

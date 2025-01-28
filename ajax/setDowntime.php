@@ -30,17 +30,70 @@
  * -------------------------------------------------------------------------
  */
 
+use Glpi\Http\Response;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 include('../../../inc/includes.php');
 
-Session::checkRight('computer', UPDATE);
-
 header('Content-Type: text/html; charset=UTF-8');
+Html::header_nocache();
 
-if (isset($_POST['params'])) {
-    $params      = $_POST['params'];
-    $hostid      = (int) $_POST['hostid'];
-    $host        = new Host();
-    $resdowntime = $host->setDowntime($hostid, $params);
+$itemId = $_GET["item_id"] ?? null;
+$itemType = $_GET["itemtype"] ?? null;
+$startTime = $_POST["start_time"] ?? null;
+$endTime = $_POST["end_time"] ?? null;
+$isFixed = $_POST["is_fixed"] ?? null;
+$withServices = $_POST["with_services"] ?? null;
+$durationUnit = $_POST["duration_unit"] ?? null;
+$durationValue = $_POST["duration_value"] ?? null;
+$comment = $_POST["comment"] ?? null;
+
+if (!isset($itemType)) {
+    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
+}
+
+if (!isset($itemId) || !is_numeric($itemId)) {
+    Response::sendError(400, "Missing or invalid parameter: 'item_id'");
+} else {
+    $itemId = (int)Toolbox::cleanInteger($itemId);
+}
+
+if (!isset($startTime, $endTime, $isFixed, $withServices, $comment)
+    || !is_string($startTime)
+    || !is_string($endTime)
+    || !is_string($comment)) {
+    Response::sendError(400, "Missing or invalid downtime parameters");
+}
+$withServices = $withServices === "true";
+$isFixed = $isFixed === "true";
+
+if ($isFixed === false) {
+    if (!isset($durationUnit, $durationValue) || !is_numeric($durationValue) || !in_array($durationUnit, ["s", "m", "h"], true)) {
+        Response::sendError(400, "Missing or invalid downtime parameters");
+    }
+    $durationValue = (int)$durationValue;
+}
+
+$item = getItemForItemtype($itemType);
+if ($item === false) {
+    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
+} else if (!$item->can($itemId, UPDATE)) {
+    Response::sendError(404, __("You don't have permission to perform this action."));
+}
+
+$host = new Host();
+if ($host->isItemLinked($itemId, $itemType)) {
+    if (!$host->setDowntime(
+        $startTime,
+        $endTime,
+        $isFixed,
+        $isFixed ? null : ["unit" => $durationUnit, "value" => $durationValue],
+        $comment,
+        $withServices
+    )) {
+        Response::sendError(500, "Request failed");
+    }
+    die("Request completed");
+} else {
+    Response::sendError(404, "No linked monitoring host found for item");
 }

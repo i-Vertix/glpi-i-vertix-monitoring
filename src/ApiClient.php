@@ -34,7 +34,6 @@ namespace GlpiPlugin\Ivertixmonitoring;
 
 use GuzzleHttp\Client;
 use GLPIKey;
-use GlpiPlugin\Ivertixmonitoring\Config;
 
 class ApiClient
 {
@@ -53,7 +52,11 @@ class ApiClient
         if (!$connected) {
             return null;
         }
-        return ["id" => $this->auth["contact_id"], "name" => $this->auth["contact_name"]];
+        return [
+            "id" => $this->auth["contact_id"],
+            "name" => $this->auth["contact_name"],
+            "alias" => $this->auth["contact_alias"]
+        ];
     }
 
     public function authenticate(): bool
@@ -75,13 +78,14 @@ class ApiClient
         ];
 
         $data = $this->clientRequest('login', $params, 'POST');
-        if (!isset($data["security"]["token"])) {
+        if (!$data["success"] || !isset($data["result"]["security"]["token"])) {
             return false;
         }
         $this->auth = [
-            "token" => $data['security']['token'],
-            "contact_id" => $data['contact']['id'],
-            "contact_name" => $data['contact']['name'],
+            "token" => $data["result"]['security']['token'],
+            "contact_id" => $data["result"]['contact']['id'],
+            "contact_name" => $data["result"]['contact']['name'],
+            "contact_alias" => $data["result"]['contact']['alias'],
         ];
 
         return true;
@@ -106,10 +110,12 @@ class ApiClient
         return $result;
     }
 
-    public function clientRequest(string $endpoint = '', array $params = [], string $method = 'GET')
+    public function clientRequest(string $endpoint = '', array $params = [], string $method = 'GET'): array
     {
         $this->monitoringConfig();
-        if (empty($this->api_config["monitoring-url"])) return null;
+        if (empty($this->api_config["monitoring-url"])) {
+            return ["success" => false, "result" => "not authenticated"];
+        }
         $api_client = new Client([
             'base_uri' => $this->api_config['monitoring-url'],
             'verify' => false,
@@ -123,15 +129,15 @@ class ApiClient
         }
 
         try {
-            $data = $api_client->request($method, $endpoint, $params);
+            $result = $api_client->request($method, $endpoint, $params);
         } catch (\Exception $e) {
-            return $e->getMessage();
+            return ["success" => false, "result" => $e->getMessage()];
         }
-        $data_body = $data->getBody();
-        return json_decode($data_body, true);
+        $code = $result->getStatusCode();
+        return ["success" => $code >= 200 && $code < 300, "result" => json_decode($result->getBody(), true)];
     }
 
-    public function getHosts(array $query = null)
+    public function getHosts(array $query = null): array
     {
         $params = [];
         if (isset($query)) {
@@ -160,25 +166,25 @@ class ApiClient
         return $this->clientRequest('monitoring/services', $params);
     }
 
-    public function getServicesByHostId(int $hostId, int $limit = 30)
+    public function getServicesByHostId(int $hostId, int $limit = 30): array
     {
         $params['query'] = ['limit' => $limit];
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/services', $params);
     }
 
-    public function sendHostCheck(int $hostId, bool $isForced = true)
+    public function sendHostCheck(int $hostId, bool $isForced = true): array
     {
         $params['json']['is_forced'] = $isForced;
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/check', $params, 'POST');
     }
 
-    public function setHostDowntime(int $hostId, array $downtime)
+    public function setHostDowntime(int $hostId, array $downtime): array
     {
         $params["json"] = $downtime;
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes', $params, 'POST');
     }
 
-    public function getHostDowntimes(int $hostId)
+    public function getHostDowntimes(int $hostId): array
     {
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes');
     }
@@ -188,7 +194,7 @@ class ApiClient
         return $this->clientRequest('monitoring/downtimes/' . $downtimeId);
     }
 
-    public function getServiceDowntimesByHostId(int $hostId)
+    public function getServiceDowntimesByHostId(int $hostId, int $limit = 30): array
     {
         $params = [
             'query' => [
@@ -197,24 +203,26 @@ class ApiClient
                         '$eq' => $hostId,
                     ],
                 ]),
+                'limit' => $limit,
+                'page' => 1,
             ],
         ];
 
         return $this->clientRequest('monitoring/services/downtimes', $params);
     }
 
-    public function cancelDowntimeById(int $downtimeId)
+    public function cancelDowntimeById(int $downtimeId): array
     {
         return $this->clientRequest('monitoring/downtimes/' . $downtimeId, [], 'DELETE');
     }
 
-    public function acknowledgeHostById(int $hostId, array $acknowledge)
+    public function acknowledgeHostById(int $hostId, array $acknowledge): array
     {
         $params["json"] = $acknowledge;
-        return $this->clientRequest('monitoring/hosts/' . $hostId . 'acknowledgements', $params, 'POST');
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/acknowledgements', $params, 'POST');
     }
 
-    public function updateHost(int $hostId, array $hostFields)
+    public function updateHost(int $hostId, array $hostFields): array
     {
         $params["json"] = $hostFields;
         return $this->clientRequest('configuration/hosts/' . $hostId, $hostFields, 'PATCH');

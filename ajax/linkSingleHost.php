@@ -41,9 +41,9 @@ Html::header_nocache();
 Session::checkLoginUser();
 
 $host = new Host();
+$itemId = $_GET["item_id"] ?? null;
+$itemType = $_GET["itemtype"] ?? null;
 $hostId = $_POST["host_id"] ?? null;
-$itemId = $_POST["item_id"] ?? null;
-$itemType = $_POST["itemtype"] ?? null;
 
 if (!isset($itemType)) {
     Response::sendError(400, "Missing or invalid parameter: 'itemtype'");

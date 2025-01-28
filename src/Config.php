@@ -101,13 +101,13 @@ class Config extends Glpi_Config
         if (empty($current_config)) $conf_ok = false;
         if ($conf_ok === true) {
             $api  = new ApiClient();
-            $diag = $api->diagnostic();
+            $connected = $api->authenticate();
 
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/diagnostic.html.twig', [
-                'diag' => $diag,
+                'connected' => $connected,
             ]);
 
-            if ($diag["result"] === true && $canedit) {
+            if ($connected === true && $canedit) {
                 TemplateRenderer::getInstance()->display('@ivertixmonitoring/syncAll.html.twig', [
                     'current_config' => $current_config,
                 ]);

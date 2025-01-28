@@ -28,24 +28,25 @@
 # -------------------------------------------------------------------------
 #}
 
-<form id="ack_form">
-    <div class="modal" tabindex="-1" id="ack_modal">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
+<div class="modal fade" tabindex="-1" role="dialog" id="modal-ack">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form id="form-ack">
+                <div class="modal-status bg-yellow"></div>
                 <div class="modal-header">
-                    <h5 class="modal-title">{{ __('Acknowledge', 'ivertixmonitoring') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('Acknowledge problem', 'ivertixmonitoring') }}</h5>
+                    <a type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></a>
                 </div>
                 <div class="modal-body">
                     <div class="row">
                         <label class="form-label">{{ __('Comment', 'ivertixmonitoring') }}</label>
-                        <textarea class="form-control" rows="3" id="comment"
-                                  name="comment">{{ __('Acknowledged by ', 'ivertixmonitoring') }}{{ username }}</textarea>
+                        <textarea class="form-control" rows="3" id="ack-comment"
+                                  name="comment"></textarea>
                     </div>
                     <div class="my-2">
                         <label class="form-check">
                             <input type="hidden" name="is_notify_contacts" value="false">
-                            <input type="checkbox" class="form-check-input" id="is_notify_contacts"
+                            <input type="checkbox" class="form-check-input" id="ack-is-notify-contacts"
                                    name="is_notify_contacts" value="true"/>
                             <span class="form-check-label text-nowrap">
                             {{ __('Notify', 'ivertixmonitoring') }}
@@ -58,7 +59,7 @@
                     <div class="my-2">
                         <label class="form-check">
                             <input type="hidden" name="is_sticky" value="false">
-                            <input type="checkbox" class="form-check-input" id="is_sticky" name="is_sticky" value="true"
+                            <input type="checkbox" class="form-check-input" id="ack-is-sticky" name="is_sticky" value="true"
                                    checked/>
                             <span class="form-check-label text-nowrap">
                             {{ __('Sticky', 'ivertixmonitoring') }}
@@ -68,7 +69,7 @@
                     <div class="my-2">
                         <label class="form-check">
                             <input type="hidden" name="is_persistent_comment" value="false">
-                            <input type="checkbox" class="form-check-input" id="is_persistent_comment"
+                            <input type="checkbox" class="form-check-input" id="ack-is-persistent-comment"
                                    name="is_persistent_comment" value="true" checked/>
                             <span class="form-check-label text-nowrap">
                             {{ __('Persistent', 'ivertixmonitoring') }}
@@ -78,32 +79,71 @@
                     <div class="my-2">
                         <label class="form-check">
                             <input type="hidden" name="with_services" value="false">
-                            <input type="checkbox" class="form-check-input" id="with_services" name="with_services"
+                            <input type="checkbox" class="form-check-input" id="ack-with-services" name="with_services"
                                    value="true" checked/>
                             <span class="form-check-label text-nowrap">
                             {{ __('Acknowledge services attached to host', 'ivertixmonitoring') }}
                         </span>
                         </label>
                     </div>
-
-
                 </div>
                 <div class="modal-footer">
-                    <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </a>
-                    <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="ack_ok">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                             stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                            <path d="M12 5l0 14"/>
-                            <path d="M5 12l14 0"/>
-                        </svg>
-                        Acknowledge
-                    </a>
+                    <div class="w-100">
+                        <div class="d-flex justify-content-between">
+                            <a href="#" class="btn" data-bs-dismiss="modal">
+                                {{ __('Cancel') }}
+                            </a>
+                            <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="submit-ack">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                     viewBox="0 0 24 24"
+                                     stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M12 5l0 14"/>
+                                    <path d="M5 12l14 0"/>
+                                </svg>
+                                {{ __('Acknowledge problem', 'ivertixmonitoring') }}
+                            </a>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
-</form>
+</div>
+
+
+<script>
+    debugger;
+
+    const resetAckModal = () => {
+        $("#form-ack").trigger("reset");
+        $("#ack-is-notify-contacts").prop("checked", false);
+        $("#ack-is-persistent-comment").prop("checked", true);
+        $("#ack-is-sticky").prop("checked", true);
+        $("#ack-with-services").prop("checked", true);
+        $("#ack-comment").val("{{ __('Acknowledged by ', 'ivertixmonitoring') }}{{ user_name }}");
+    }
+
+    $('#submit-ack').click(function () {
+        const params = $('#form-ack').serializeArray();
+        const data = {};
+        $.each(params, function () {
+            data[this.name] = this.value;
+        });
+        $.ajax({
+            "type": 'POST',
+            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
+                + "/ajax/ack.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "data": data,
+            "success": function (result) {
+                glpi_toast_info("{{ __('It may take some time for the problem to be acknowledged', 'ivertixmonitoring') }}", "{{ __('Host problem acknowledged', 'ivertixmonitoring') }}");
+            },
+            "error": function (result) {
+                glpi_toast_error("{{ __('Failed to acknowledge host problem', 'ivertixmonitoring') }}");
+            }
+        });
+    });
+
+
+</script>

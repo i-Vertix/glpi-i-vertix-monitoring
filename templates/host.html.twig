@@ -29,13 +29,13 @@
 #}
 
 <div class="d-flex flew-row align-items-center py-3 ps-2">
-    <h1 class="pe-3 m-0">Host Information</h1>
-    <img class="h-4 d-inline-block" alt="i-vertix monitoring" src="{{ logo }}"/>
-    <button type="button" class="btn ms-4 me-1 toggle" id="check">
+    <h1 class="me-3 m-0">Host Information</h1>
+    <img class="h-4 d-inline-block me-3" alt="i-vertix monitoring" src="{{ logo }}"/>
+    <button type="button" class="btn ms-1 me-1" id="button-check">
         <i class="ti ti-refresh"></i>
         <span>{{ __('Check', 'ivertixmonitoring') }}</span>
     </button>
-    <button type="button" class="btn" id="downtime">
+    <button type="button" class="btn ms-1 me-1" id="button-downtime">
         <i class="ti ti-clock-pause"></i>
         <span>{{ __('Downtime', 'ivertixmonitoring') }}</span>
     </button>
@@ -56,13 +56,19 @@
                         {{ host.status }}
                         </span>
                     {% elseif host.status == 'DOWN' %}
+                        {% if host.acknowledged != false %}
+                            <span class="ti ti-user text-yellow m-1" title="{{ host.acknowledged }}" data-bs-toggle="tooltip"
+                                  data-bs-placement="top"></span>
+                        {% endif %}
                         <span class="status status-red">
                             {{ host.status }}
                         </span>
-                        <button type="button" class="btn mt-1" id="ack">
-                            <i class="ti ti-user"></i>
-                            <span>{{ __('Acknowledge', 'ivertixmonitoring') }}</span>
-                        </button>
+                        {% if host.acknowledged == false %}
+                            <button type="button" class="btn mt-1" id="button-ack">
+                                <i class="ti ti-user"></i>
+                                <span>{{ __('Acknowledge', 'ivertixmonitoring') }}</span>
+                            </button>
+                        {% endif %}
                     {% else %}
                         <span class="status status-orange">
                         {{ host.status }}
@@ -118,10 +124,10 @@
                     <div class="card-status-start bg-red"></div>
                     <div class="card-body">
                         <h3 class="card-title m-0 text-truncate">{{ __('Host in downtime', 'ivertixmonitoring') }}</h3>
-                        <div>{{ __('From : ', 'ivertixmonitoring') }}{{ host.downtimes.0.start_time }}</div>
-                        <div>{{ __('To : ', 'ivertixmonitoring') }}{{ host.downtimes.0.end_time }}</div>
-                        <div>{{ __('Author name : ', 'ivertixmonitoring') }}{{ host.downtimes.0.author_name }}</div>
-                        <div>{{ __('Comment : ', 'ivertixmonitoring') }}{{ host.downtimes.0.comment }}</div>
+                        <div>{{ __('From : ', 'ivertixmonitoring') }}{{ downtime.start_time }}</div>
+                        <div>{{ __('To : ', 'ivertixmonitoring') }}{{ downtime.end_time }}</div>
+                        <div>{{ __('Author name : ', 'ivertixmonitoring') }}{{ downtime.author_name }}</div>
+                        <div>{{ __('Comment : ', 'ivertixmonitoring') }}{{ downtime.comment }}</div>
                         <button class="btn mt-2"
                                 id="cancel_downtime_{{ downtime.id }}">{{ __('Cancel', 'ivertixmonitoring') }}</button>
                     </div>
@@ -178,8 +184,8 @@
 
             <div class="row row-deck p-2 mb-2">
                 {% for service in host["services"] %}
-                    {% set color = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "grey" : "blue" %}
-                    {% set bgcolor = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "secondary" : "blue" %}
+                    {% set color = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "light" : "blue" %}
+                    {% set bgcolor = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "light" : "blue" %}
                     <div class="col-md-4">
                         <div class="card mt-3" style="max-height: 200px;">
                             <div class="card-status-start bg-{{ bgcolor }}"></div>
@@ -206,95 +212,62 @@
 </div>
 
 <script>
+    debugger;
     $(document).ready(function () {
-        $('#check').click(function () {
-            $('.toggle').toggleClass('d-none');
-            $.post(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/sendCheck.php?hostid=" + {{ hostid }}, function (response) {
-                reloadTab('');
-                $('#check').addClass('btn-lime');
-                $('.toggle').toggleClass('d-none');
-            });
-        });
-        $('#downtime').click(function () {
-            $('#duration_select').hide();
-            $('#dialog').modal('show');
-        });
-        $('#is_fixed').click(function () {
-            $('#duration_select').toggle();
-        });
-        $('#submit').click(function () {
-            var textarea = $.trim($('#comment').val());
-            if (textarea != "") {
-                $('#comment').val(textarea);
-            }
 
-            var params = $('#setdowntime').serializeArray();
-            var flatparams = {};
-            $.each(params, function () {
-                if (this.name.includes('time')) {
-                    var date = new Date(this.value);
-                    this.value = date.toISOString();
-                }
-                flatparams[this.name] = this.value;
-            });
+
+        $('#button-check').click(function () {
+            $('#button-check').prop('disabled', true);
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/setDowntime.php",
-                "data": {
-                    "hostid": {{ hostid }},
-                    "params": flatparams
-                },
+                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
+                    + "/ajax/sendCheck.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
                 "success": function (result) {
-                    console.log('downtime envoyé');
-                    reloadTab('');
-                }
-            });
-        });
-        $('#ack').click(function () {
-            $('#ack_modal').modal('show');
-        });
-        $('#ack_ok').click(function () {
-            var params = $('#ack_form').serializeArray();
-            var flatparams = {};
-            $.each(params, function () {
-                flatparams[this.name] = this.value;
-            });
-            console.log(params);
-            $.ajax({
-                "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/ack.php",
-                "data": {
-                    "hostid": {{ hostid }},
-                    "params": flatparams
+                    $('#button-check').prop('disabled', false);
+                    glpi_toast_info("{{ __('Host check sent', 'ivertixmonitoring') }}");
                 },
-                "success": function (data) {
-                    reloadTab('');
-                    console.log('acknowledge ok');
-                    console.log(data);
+                "error": function (result) {
+                    $('#button-check').prop('disabled', false);
+                    glpi_toast_info("{{ __('Failed to send host check', 'ivertixmonitoring') }}");
                 }
             });
         });
+
+        $('#button-downtime').click(function () {
+            $('#modal-downtime').modal('show');
+
+            resetDowntimeModal();
+        });
+
+        {% if host.acknowledged == false %}
+        $('#button-ack').click(function () {
+            $('#modal-ack').modal('show');
+
+            resetAckModal();
+        });
+        {% endif %}
 
         {% for downtime in host["downtimes"] %}
         $('#cancel_downtime_{{ downtime.id }}').click(function () {
-            console.log("dican");
+            $('#cancel_downtime_{{ downtime.id }}').prop('disabled', true);
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/cancelDowntime.php",
+                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
+                    + "/ajax/cancelDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
                 "data": {
-                    "item_id": {{ item_id }},
-                    "itemtype": "{{ itemtype }}",
                     "downtime_id": {{ downtime.id }}
                 },
                 "success": function (data) {
+                    $('#cancel_downtime_{{ downtime.id }}').prop('disabled', false);
                     glpi_toast_info("{{ __('It may take some time for the downtime to disappear', 'ivertixmonitoring') }}", "{{ __('Downtime canceled', 'ivertixmonitoring') }}");
+                },
+                "error": function (data) {
+                    $('#cancel_downtime_{{ downtime.id }}').prop('disabled', false);
+                    glpi_toast_error("{{ __('Failed to cancel the downtime', 'ivertixmonitoring') }}");
                 }
             });
         });
         {% endfor %}
 
-        $(document).on('submit', '#setdowntime', function (event) {
-            event.preventDefault();
-        });
     });
 </script>

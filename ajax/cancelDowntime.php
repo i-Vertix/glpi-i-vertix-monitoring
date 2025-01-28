@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------
  */
 
+use Glpi\Http\Response;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 include('../../../inc/includes.php');
@@ -37,8 +38,8 @@ include('../../../inc/includes.php');
 header('Content-Type: text/html; charset=UTF-8');
 Html::header_nocache();
 
-$itemId = $_POST["item_id"] ?? null;
-$itemType = $_POST["itemtype"] ?? null;
+$itemId = $_GET["item_id"] ?? null;
+$itemType = $_GET["itemtype"] ?? null;
 $downtimeId = $_POST["downtime_id"] ?? null;
 
 if (!isset($itemType)) {
@@ -52,7 +53,7 @@ if (!isset($itemId) || !is_numeric($itemId)) {
 }
 
 if (!isset($downtimeId) || !is_numeric($downtimeId)) {
-    Response::sendError(400, "Missing or invalid parameter: 'item_id'");
+    Response::sendError(400, "Missing or invalid parameter: 'downtime_id");
 } else {
     $downtimeId = (int)Toolbox::cleanInteger($downtimeId);
 }
@@ -60,13 +61,16 @@ if (!isset($downtimeId) || !is_numeric($downtimeId)) {
 $item = getItemForItemtype($itemType);
 if ($item === false) {
     Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
-} else if ($item->can($itemId, UPDATE)) {
+} else if (!$item->can($itemId, UPDATE)) {
     Response::sendError(404, __("You don't have permission to perform this action."));
 }
 
 $host  = new Host();
 if ($host->isItemLinked($itemId, $itemType)) {
-    $host->cancelDowntime($downtimeId);
+    if (!$host->cancelDowntime($downtimeId)) {
+        Response::sendError(500, "Request failed");
+    }
+    die("Request completed");
 } else {
     Response::sendError(404, "No linked monitoring host found for item");
 }

@@ -34,11 +34,10 @@
         // link host using ajax post
         $.ajax({
             "type": 'POST',
-            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/linkSingleHost.php",
+            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
+                + "/ajax/linkSingleHost.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
             "data": {
                 "host_id": selected ?? "",
-                "itemtype": "{{ itemtype }}",
-                "item_id": {{ item_id }}
             },
             "success": function (result) {
                 console.log('item linked to host:', result);

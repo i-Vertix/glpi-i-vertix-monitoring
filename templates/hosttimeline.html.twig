@@ -30,28 +30,36 @@
 
 <div class="d-flex">
     <h2 class="pe-3 my-2">{{ __("Timeline") }}</h2>
-    <div class="btn-group" role="group" aria-label="Basic outlined example">
+    <div class="btn-group" id="timeline-btn" role="group" aria-label="Basic outlined example">
         <button type="button" class="btn btn-outline-secondary" id="t-day">{{ __("1 Day") }}</button>
         <button type="button" class="btn btn-outline-secondary" id="t-week">{{ __("1 Week") }}</button>
         <button type="button" class="btn btn-outline-secondary" id="t-month">{{ __("1 Month") }}</button>
     </div>
 </div>
-<div id="p-test"></div>
+<div id="p-timeline"></div>
 
 
 <script>
     $(document).ready(function () {
+        const loadTimeline = (period) => {
+            $('#p-timeline')
+                .html('<i class="fas fa-3x fa-spinner fa-spin ms-auto"></i>')
+                .load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=" + period
+                    + "&itemtype={{ itemtype }}&item_id={{ item_id }}");
+            $('#timeline-btn .btn').removeClass('btn-secondary').addClass('btn-outline-secondary');
+            $(`#t-${period}`).removeClass('btn-outline-secondary').addClass('btn-secondary');
+        }
         $('#t-day').click(function () {
-            $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=day&hostid=" + {{ hostid }})
+            loadTimeline("day");
         });
         $('#t-week').click(function () {
-            $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=week&hostid=" + {{ hostid }});
+            loadTimeline("week");
         });
         $('#t-month').click(function () {
-            $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=month&hostid=" + {{ hostid }});
+            loadTimeline("month");
         });
 
-        $('#p-test').load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=day&hostid=" + {{ hostid }})
+        loadTimeline("day");
     });
 
 </script>

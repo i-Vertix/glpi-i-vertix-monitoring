@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------
  */
 
+use Glpi\Http\Response;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 include('../../../inc/includes.php');
@@ -37,10 +38,14 @@ include('../../../inc/includes.php');
 header('Content-Type: text/html; charset=UTF-8');
 Html::header_nocache();
 
-//Session::checkRight('computer', UPDATE);
+$itemId = $_GET["item_id"] ?? null;
+$itemType = $_GET["itemtype"] ?? null;
 
-$itemId = $_POST["item_id"] ?? null;
-$itemType = $_POST["itemtype"] ?? null;
+$isNotifyContacts = $_POST["is_notify_contacts"] ?? null;
+$isPersistentComment = $_POST["is_persistent_comment"] ?? null;
+$isSticky = $_POST["is_sticky"] ?? null;
+$withServices = $_POST["with_services"] ?? null;
+$comment = $_POST["comment"] ?? null;
 
 
 if (!isset($itemType)) {
@@ -53,17 +58,34 @@ if (!isset($itemId) || !is_numeric($itemId)) {
     $itemId = (int)Toolbox::cleanInteger($itemId);
 }
 
+if (!isset($isNotifyContacts, $isPersistentComment, $isSticky, $withServices, $comment)
+    || !is_string($comment)) {
+    Response::sendError(400, "Missing or invalid acknowledge parameters");
+}
+$isNotifyContacts = $isNotifyContacts === "true";
+$isPersistentComment = $isPersistentComment === "true";
+$isSticky = $isSticky === "true";
+$withServices = $withServices === "true";
+
 $item = getItemForItemtype($itemType);
 if ($item === false) {
     Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
-} else if ($item->can($itemId, UPDATE)) {
+} else if (!$item->can($itemId, UPDATE)) {
     Response::sendError(404, __("You don't have permission to perform this action."));
 }
 
-$host  = new Host();
+$host = new Host();
 if ($host->isItemLinked($itemId, $itemType)) {
-    // todo: acknowledge
-    $host->acknowledge();
+    if (!$host->acknowledge(
+        $comment,
+        $isNotifyContacts,
+        $isPersistentComment,
+        $isSticky,
+        $withServices
+    )) {
+        Response::sendError(500, "Request failed");
+    }
+    die("Request completed");
 } else {
     Response::sendError(404, "No linked monitoring host found for item");
 }

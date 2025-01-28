@@ -28,42 +28,40 @@
 # -------------------------------------------------------------------------
 #}
 
-<a href="#" class="btn btn-primary" id="sync">
+<button type="button" class="btn btn-primary" id="button-sync">
     <i class='fas fa-sync me-2' id="icon"></i>
     {{ current_config["monitoring-sync"] == "1" ? __('Sync all assets to monitoring', 'ivertixmonitoring') }}
-    {{ current_config["monitoring-sync"] == "0" ? __('Link assets to monitoring hosts (internal)', 'ivertixmonitoring') }}
-</a>
-<span class="status status-green" style="display: none;" id="result">
+    {{ current_config["monitoring-sync"] == "0" ? __('Automatically link assets to monitoring hosts (by name)', 'ivertixmonitoring') }}
+</button>
+<span class="status status-green mx-2" id="sync-result">
     <span class="status-dot"></span>
-    <span id="resultContent"></span>
+    <span id="sync-result-content"></span>
 </span>
 
 <script>
     $(document).ready(function () {
-        let loading = false;
-        $('#sync').click(function () {
-            if (loading) return;
-            loading = true;
-            $('#icon').addClass("fa-spin");
+        $('#button-sync').click(function () {
+            $('#button-sync').prop('disabled', true);
+            $('#icon').toggleClass("fa-spin");
             $.ajax({
                 "type": 'POST',
                 "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/linkAllHosts.php",
                 "success": function (result) {
-                    console.log('synced all', result);
-                    loading = false;
-                    $('#icon').removeClass("fa-spin");
-                    $('#result').css("display", "inline-block").removeClass("status-red").addClass("status-green");
-                    $('#resultContent').text("Hi, this is the result: " + result);
+                    $('#button-sync').prop('disabled', false);
+                    $('#icon').toggleClass("fa-spin");
+                    $('#sync-result').toggle().removeClass("status-red").addClass("status-green");
+                    $('#sync-result-content').text(result);
                 },
                 "error": function (result) {
-                    loading = false;
-                    $('#icon').removeClass("fa-spin");
-                    $('#result').css("display", "inline-block").removeClass("status-green").addClass("status-red");
-                    $('#resultContent').text("An error occurred");
-                    console.log(result);
+                    $('#button-sync').prop('disabled', false);
+                    $('#icon').toggleClass("fa-spin");
+                    $('#sync-result').toggle().removeClass("status-green").addClass("status-red");
+                    $('#sync-result-content').text("An error occurred");
                 }
             });
         });
+        $('#sync-result').toggle();
+
     });
 </script>
 

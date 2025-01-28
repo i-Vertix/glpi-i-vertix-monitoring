@@ -70,9 +70,10 @@ class Host extends CommonDBTM
         if ($connected === true) {
             // TODO: PAGING
             $list = $api->getHosts();
-            if ($list != null) {
+            if ($list["success"]) {
+                $list = $list["result"];
                 $items = [];
-                foreach ($list['result'] as $item) {
+                foreach ($list["result"] as $item) {
                     $items[$item["id"]] = $item;
                 }
                 return $items;
@@ -103,8 +104,9 @@ class Host extends CommonDBTM
             }
             $list = $api->getHosts($query);
             $items = [];
-            if (isset($list["result"])) {
-                foreach ($list['result'] as $item) {
+            if ($list["success"]) {
+                $list = $list["result"];
+                foreach ($list["result"] as $item) {
                     $items[] = ["id" => $item["id"], "name" => $item["name"]];
                 }
             }
@@ -121,10 +123,10 @@ class Host extends CommonDBTM
         $connected = $this->api_client->authenticate();
         if ($connected === true) {
             $host = $this->api_client->getHostById((int)$this->fields["monitoring_id"]);
-            if (!isset($host["name"])) {
-                return null;
+            if ($host["success"]) {
+                $host = $host["result"];
+                return ["id" => $host["id"], "name" => $host["name"]];
             }
-            return ["id" => $host["id"], "name" => $host["name"]];
         }
         return null;
     }
@@ -140,7 +142,10 @@ class Host extends CommonDBTM
             $hostResources = $this->api_client->getHostResourceDetailById((int)$this->fields["monitoring_id"]);
             $hostServices = $this->api_client->getServicesByHostId((int)$this->fields["monitoring_id"]);
 //            $hostDowntimes = $this->api_client->getHostDowntimes((int)$this->fields["monitoring_id"]);
-            if ($hostDetail !== null) {
+            if ($hostDetail["success"] && $hostResources["success"] && $hostServices["success"]) {
+                $hostDetail = $hostDetail["result"];
+                $hostResources = $hostResources["result"];
+                $hostServices = $hostServices["result"];
                 $host = [
                     'status' => $hostResources['status']['name'],
                     'name' => $hostResources['name'],
@@ -150,6 +155,12 @@ class Host extends CommonDBTM
                     'next_check' => $hostDetail['next_check'],
                     'check_period' => $hostDetail['check_period'],
                     'in_downtime' => $hostResources['in_downtime'],
+                    'acknowledged' => $hostResources["acknowledgement"] !== null ?
+                        sprintf("Problem acknowledged by '%s' on %s%s",
+                            $hostResources["acknowledgement"]["author_name"],
+                            $hostResources["acknowledgement"]["entry_time"],
+                            trim($hostResources["acknowledgement"]["comment"]) !== "" ? " - " . $hostResources["acknowledgement"]["comment"] : ""
+                        ) : false,
                 ];
                 if ($hostResources['in_downtime']) {
                     $host['downtimes'] = $hostResources['downtimes'];
@@ -171,19 +182,20 @@ class Host extends CommonDBTM
         $connected = $api->authenticate();
         $timeline = [];
         if ($connected === true) {
-            $hostTimelineById = $api->getHostTimelineById((int)$this->fields["monitoring_id"])["result"] ?? null;
-            if (!$hostTimelineById) return null;
+            $hostTimelineById = $api->getHostTimelineById((int)$this->fields["monitoring_id"]);
+            if (!$hostTimelineById["success"]) {
+                return null;
+            }
+            $hostTimelineById = $hostTimelineById["result"]["result"];
             foreach ($hostTimelineById as $event) {
-                if ($event['type'] === 'downtime') {
-                    $event['status']['name'] = __('unset', 'ivertixmonitoring');
-                    $event['tries'] = __('unset', 'ivertixmonitoring');
+                if (!isset($event["status"]["name"])) {
+                    $event['status']['name'] = $event["type"];
                 }
                 $timeline[] = [
-                    'id' => $event['id'],
                     'date' => self::transformDate($event['date']),
                     'content' => $event['content'],
                     'status' => $event['status']['name'],
-                    'tries' => $event['tries'],
+                    'tries' => $event['tries'] ?? "",
                 ];
             }
 
@@ -233,13 +245,12 @@ class Host extends CommonDBTM
         $connected = $api->authenticate();
         if ($connected === true) {
             $res = $api->sendHostCheck((int)$this->fields["monitoring_id"]);
-            // todo: check return
-            return true;
+            return $res["success"];
         }
         return false;
     }
 
-    public function setDowntime(string $startTime, string $endTime, bool $isFixed, array $duration, string $comment, bool $withServices): bool
+    public function setDowntime(string $startTime, string $endTime, bool $isFixed, ?array $duration, string $comment, bool $withServices): bool
     {
         if (!isset($this->fields["monitoring_id"])) {
             return false;
@@ -260,8 +271,7 @@ class Host extends CommonDBTM
         $connected = $api->authenticate();
         if ($connected === true) {
             $res = $api->setHostDowntime((int)$this->fields["monitoring_id"], $downtime);
-            // todo: check return
-            return true;
+            return $res["success"];
         }
         return false;
     }
@@ -299,40 +309,36 @@ class Host extends CommonDBTM
         $api = $this->api_client;
         $connected = $api->authenticate();
 
-        // todo: no zu entscheiden ob di service downtimes a glöscht werden solln.. do isch nor auzupassen ob net mehrere downtimes gsetzt sein! und wenn di service
-        //  downtimes a zu löschen sein, nor muas men umbedingt schaugen dass schunn a lei de mit dor gleichen zeit glöscht werden !
-
-        // todo: ok, service downtimes a löschen, ober lei wenn di uhrzeit di gleiche isch wia fe der fe dor host downtime !
-        // nomol host_id fe dor downtimebyid überprüfen !
-
         if ($connected === true) {
-            $actualDowntime = $api->getDowntimeById($downtimeId);
-            $host_id = $actualDowntime['host_id'];
-            $start_time = $actualDowntime['start_time'];
-            $end_time = $actualDowntime['end_time'];
+            $hostDowntime = $api->getDowntimeById($downtimeId);
+            if (!$hostDowntime["success"]) {
+                return false;
+            }
+            $hostDowntime = $hostDowntime["result"];
+            // check host id
+            if ((int)$this->fields["monitoring_id"] !== $hostDowntime["host_id"]) {
+                return false;
+            }
 
-            $servicesDowntimes = $api->getServiceDowntimesByHostId($host_id);
-            foreach ($servicesDowntimes['result'] as $serviceDowntime) {
-                if (isset($serviceDowntime['start_time'], $serviceDowntime['end_time'])) {
-                    if ($serviceDowntime['start_time'] === $start_time && $serviceDowntime['end_time'] === $end_time) {
-                        $s_downtime_id = $serviceDowntime['id'];
-                        $api->cancelDowntimeById($s_downtime_id);
+            $hostId = $hostDowntime['host_id'];
+            $startTime = $hostDowntime['start_time'];
+            $endTime = $hostDowntime['end_time'];
+
+            $servicesDowntimes = $api->getServiceDowntimesByHostId($hostId, 200);
+            if ($servicesDowntimes["success"]) {
+                $servicesDowntimes = $servicesDowntimes["result"];
+                foreach ($servicesDowntimes['result'] as $serviceDowntime) {
+                    if (isset($serviceDowntime['start_time'], $serviceDowntime['end_time'])
+                        && $serviceDowntime['start_time'] === $startTime && $serviceDowntime['end_time'] === $endTime) {
+                        $api->cancelDowntimeById($serviceDowntime['id']);
                     }
-                } else {
-                    $error[] = [
-                        'service_id' => $serviceDowntime['id'],
-                        'message' => 'No downtime found for this service',
-                    ];
                 }
             }
-            $api->cancelDowntimeById($downtimeId);
-        } else {
-            $error[] = [
-                'message' => $connected,
-            ];
+            $res = $api->cancelDowntimeById($downtimeId);
+            return $res["success"];
         }
 
-        return $error;
+        return false;
     }
 
     public function acknowledge(string $comment, bool $isNotifyContacts, bool $isPersistentComment, bool $isSticky, bool $withServices): bool
@@ -343,15 +349,14 @@ class Host extends CommonDBTM
         $api = $this->api_client;
         $connected = $api->authenticate();
         if ($connected === true) {
-            $result = $api->acknowledgeHostById((int)$this->fields["monitoring_id"], [
+            $res = $api->acknowledgeHostById((int)$this->fields["monitoring_id"], [
                 "comment" => $comment,
                 "is_notify_contacts" => $isNotifyContacts,
                 "is_persistent_comment" => $isPersistentComment,
                 "is_sticky" => $isSticky,
                 "with_services" => $withServices
             ]);
-            // todo: check return
-            return true;
+            return $res["success"];
         }
         return false;
     }
@@ -380,17 +385,20 @@ class Host extends CommonDBTM
             return false;
         }
 
-        if (isset($match['result']['0']['name']) && $match['result']['0']['name'] === $obj_name) {
-            $monitoring_id = $match['result']['0']['id'];
-            $new_id = $this->add([
-                'itemtype' => $type,
-                'item_id' => $id,
-                'monitoring_id' => $monitoring_id,
-                'monitoring_type' => 'host',
-            ]);
-            $this->getFromDB($new_id);
+        if ($match["success"] && isset($match["result"]["result"][0])) {
+            $match = $match["result"]["result"][0];
+            if ($match['name'] === $obj_name) {
+                $monitoring_id = $match['id'];
+                $new_id = $this->add([
+                    'itemtype' => $type,
+                    'item_id' => $id,
+                    'monitoring_id' => $monitoring_id,
+                    'monitoring_type' => 'host',
+                ]);
+                $this->getFromDB($new_id);
 
-            return true;
+                return true;
+            }
         }
 
         return false;
@@ -609,9 +617,7 @@ class Host extends CommonDBTM
                         'item_id' => $item_id,
                         'itemtype' => $item_type,
                         'host' => $hostDetail,
-                        'hostid' => (int)$self->fields['monitoring_id'],
-                        'uid' => $user["id"],
-                        'username' => $user["name"],
+                        'user_name' => $user["alias"],
                         'logo' => Plugin::getWebDir('ivertixmonitoring') . '/files/logo-ivertix.png',
                     ]);
                 }

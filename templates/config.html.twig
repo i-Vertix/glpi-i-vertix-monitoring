@@ -36,19 +36,19 @@
     {% if can_edit %}
         <input type="hidden" name="config_context" value="plugin:ivertixmonitoring">
         <div class="mb-3">
-            <label class="form-label">{{ __("i-Vertix Monitoring API URL") }}</label>
-            <input type="text" class="form-control" name="monitoring-url"
-                   placeholder="https://<fqdn>/centreon/api/v23.10/"
-                   value="{{ current_config['monitoring-url'] }}">
+            <label class="form-label" for="monitoring-url">{{ __("i-Vertix Monitoring API URL") }}</label>
+            <input type="text" class="form-control" name="monitoring-url" id="monitoring-url"
+                   placeholder="https://<fqdn>/centreon/api/latest/" value="{{ current_config['monitoring-url'] }}">
         </div>
         <div class="mb-3">
-            <label class="form-label">{{ __("Monitoring username") }}</label>
-            <input type="text" class="form-control" name="monitoring-username" placeholder="Username"
-                   value="{{ current_config['monitoring-username'] }}">
+            <label class="form-label" for="monitoring-username">{{ __("Monitoring username") }}</label>
+            <input type="text" class="form-control" name="monitoring-username" id="monitoring-username"
+                   placeholder="Username" value="{{ current_config['monitoring-username'] }}">
         </div>
         <div class="mb-3">
-            <label class="form-label">{{ __("Monitoring password") }}</label>
-            <input type="password" class="form-control" name="monitoring-password" placeholder="Password">
+            <label class="form-label" for="monitoring-password">{{ __("Monitoring password") }}</label>
+            <input type="password" class="form-control" name="monitoring-password" id="monitoring-password"
+                   placeholder="Password">
         </div>
         <div class="mb-3">
             {{ fields.dropdownYesNo(

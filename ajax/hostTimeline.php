@@ -31,20 +31,45 @@
  */
 
 use Glpi\Application\View\TemplateRenderer;
+use Glpi\Http\Response;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 include('../../../inc/includes.php');
 
-Session::checkRight('computer', READ);
-
 header('Content-Type: text/html; charset=UTF-8');
+Html::header_nocache();
 
-if (isset($_GET['period']) && isset($_GET['hostid'])) {
-    $param_period = $_GET['period'];
-    $param_hostid = $_GET['hostid'];
-    $host = new Host();
-    $timeline = $host->getTimeline($_GET['period']);
+$itemId = $_GET["item_id"] ?? null;
+$itemType = $_GET["itemtype"] ?? null;
+$period = $_GET["period"] ?? null;
+
+if (!isset($itemType)) {
+    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
+}
+
+if (!isset($itemId) || !is_numeric($itemId)) {
+    Response::sendError(400, "Missing or invalid parameter: 'item_id'");
+} else {
+    $itemId = (int)Toolbox::cleanInteger($itemId);
+}
+
+if (!isset($period) || !in_array($period, ["day", "week", "month"], true)) {
+    Response::sendError(400, "Missing or invalid parameter: 'period'");
+}
+
+$item = getItemForItemtype($itemType);
+if ($item === false) {
+    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
+} else if (!$item->can($itemId, READ)) {
+    Response::sendError(404, __("You don't have permission to perform this action."));
+}
+
+$host = new Host();
+if ($host->isItemLinked($itemId, $itemType)) {
+    $timeline = $host->getTimeline($_GET['period']) ?? [];
     TemplateRenderer::getInstance()->display('@ivertixmonitoring/timeline.html.twig', [
         'timeline' => $timeline,
     ]);
+} else {
+    Response::sendError(404, "No linked monitoring host found for item");
 }

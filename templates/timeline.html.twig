@@ -34,7 +34,6 @@
                 class="table table-vcenter">
             <thead>
             <tr>
-                <th>{{ __('ID') }}</th>
                 <th>{{ __('Date') }}</th>
                 <th>{{ __('Content') }}</th>
                 <th>{{ __('Status') }}</th>
@@ -45,7 +44,6 @@
             <tbody>
             {% for event in timeline %}
                 <tr>
-                    <td>{{ event.id }}</td>
                     <td class="text-muted">{{ event.date }}</td>
                     <td class="text-muted">{{ event.content }}</td>
                     <td class="text-muted">{{ event.status }}</td>
