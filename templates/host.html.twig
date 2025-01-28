@@ -55,7 +55,8 @@
                         </span>
                     {% elseif host.status == 'DOWN' %}
                         {% if host.acknowledged != false %}
-                            <span class="ti ti-user text-yellow m-1" title="{{ host.acknowledged }}" data-bs-toggle="tooltip"
+                            <span class="ti ti-user text-yellow m-1" title="{{ host.acknowledged }}"
+                                  data-bs-toggle="tooltip"
                                   data-bs-placement="top"></span>
                         {% endif %}
                         <span class="status status-red">
@@ -185,16 +186,20 @@
                     {% set color = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "light" : "blue" %}
                     {% set bgcolor = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "light" : "blue" %}
                     <div class="col-md-4">
-                        <div class="card mt-3" style="max-height: 200px;">
+                        <div class="card mt-3">
                             <div class="card-status-start bg-{{ bgcolor }}"></div>
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <span class="status status-{{ color }}">{{ service.status.name }}</span>
                                     <h3 class="card-title m-0 px-2 text-truncate">{{ service["display_name"] }}</h3>
                                 </div>
-                                <div class="d-flex justify-content-between">
-                                    <code class="m-0 mt-3"> {{ service["output"] }} </code>
-                                    <code class="text-nowrap m-0 mt-3 ms-2"> {{ service["duration"] }} </code>
+                                <div class="d-flex justify-content-between gap-2 mt-3">
+                                    <div>
+                                        <code class="d-inline-block w-100 overflow-auto" style="max-height: 120px">{{ service["output"] }}</code>
+                                    </div>
+                                    <div>
+                                        <code class="text-nowrap d-inline-block">{{ service["duration"] }}</code>
+                                    </div>
                                 </div>
                             </div>
                         </div>

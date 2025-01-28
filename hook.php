@@ -48,8 +48,8 @@ function plugin_ivertixmonitoring_install($version)
         $query = "CREATE TABLE `$table` (
                   `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
                   `itemtype`        VARCHAR(100) NOT NULL,
-                  `item_id`         INT(10) UNSIGNED NOT NULL DEFAULT '0',
-                  `monitoring_id`   INT(10) NOT NULL,
+                  `item_id`         INT(10) UNSIGNED NOT NULL,
+                  `monitoring_id`   INT(10) UNSIGNED NOT NULL,
                   `monitoring_type` VARCHAR(100) DEFAULT 'host',
                   PRIMARY KEY  (`id`),
                   KEY `item_id` (`item_id`)

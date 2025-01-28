@@ -90,10 +90,13 @@ class Config extends Glpi_Config
         ]);
 
         $conf_ok = true;
+        $all_nok = true;
 
         foreach ($current_config as $v) {
-            if (strlen($v) === 0) {
+            if ($v === '') {
                 $conf_ok = false;
+            } else {
+                $all_nok = false;
             }
         }
         if (empty($current_config)) $conf_ok = false;
@@ -110,7 +113,7 @@ class Config extends Glpi_Config
                     'current_config' => $current_config,
                 ]);
             }
-        } else {
+        } else if (!$all_nok) {
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/checkField.html.twig');
         }
     }
