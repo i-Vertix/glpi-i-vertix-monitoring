@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_IVERTIXMONITORING_VERSION', '1.0.2');
+define('PLUGIN_IVERTIXMONITORING_VERSION', '10.0.0');
 
 // Minimal GLPI version, inclusive
 define('PLUGIN_IVERTIXMONITORING_MIN_GLPI_VERSION', '10.0.0');

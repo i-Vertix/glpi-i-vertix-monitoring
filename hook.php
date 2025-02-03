@@ -58,20 +58,6 @@ function plugin_ivertixmonitoring_install($version)
                  COLLATE={$default_collation}";
         $DB->doQuery($query);
     }
-    $monitoring_password = Config::getConfigurationValue('plugin:ivertixmonitoring', 'monitoring-password');
-    /**Migration to 1.0.1 */
-    if ($monitoring_password !== null) {
-        /** Check if pwd is already encrypted, if not, it returns empty string */
-        /** It's not necessary to encrypt again, because setConfigurationValues() check
-         * if the value is in secured_configs and if yes, and encrypt it
-         */
-        $decrypted_pwd = @(new GLPIKey())->decrypt($monitoring_password);
-        if ($decrypted_pwd == '') {
-            Config::setConfigurationValues('plugin:ivertixmonitoring', [
-                'monitoring-password' => $monitoring_password,
-            ]);
-        }
-    }
     return true;
 }
 
@@ -106,7 +92,7 @@ function plugin_ivertixmonitoring_getAddSearchOptionsNew($itemtype)
 
     if ($itemtype == 'Computer') {
         $sopt[] = [
-            'id'               => 2023,
+            'id'               => 6942,
             'table'            => GlpiPlugin\Ivertixmonitoring\Host::getTable(),
             'field'            => 'id',
             'name'             => __('i-Vertix Monitoring Host Status', 'ivertixmonitoring'),
