@@ -131,3 +131,20 @@ the [plugin configuration](#configure-the-connection-to-the-monitoring-system).
 
 The weblink is available on the *Resource Status* page of your connected i-Vertix Monitoring solution.
 Remember to enable the list-column *Notes* in the list configuration (see image above).
+
+## Translation
+
+To translate strings used in the plugin, we use xgettext to extract the strings from `.php` and `.html.twig` files.
+We created a special powershell script located in `locales/` which scans the whole project directory for such files.
+
+*The script must be executed from the plugin root directory!*
+
+Command to execute the script:
+
+```bash
+
+powershell -ExecutionPolicy Bypass -File "<script directory>\xgettext.ps1" -Exe "<path to xgettext.exe>" -Output ".\locales\i-vertix-monitoring.pot"
+
+```
+
+The script will output a .pot file which can be used to update the translations.

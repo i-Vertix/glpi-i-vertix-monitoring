@@ -9,10 +9,10 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-02-03 10:16+0100\n"
-"PO-Revision-Date: 2025-02-03 10:30+0100\n"
+"PO-Revision-Date: 2025-02-03 10:26+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
-"Language: en_GB\n"
+"Language: it_IT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -25,15 +25,15 @@ msgstr "i-Vertix Monitoring Host Status"
 #: ajax\ack.php:72 ajax\cancelDowntime.php:63 ajax\hostTimeline.php:62
 #: ajax\linkSingleHost.php:68 ajax\sendCheck.php:56 ajax\setDowntime.php:79
 msgid "You don't have permission to perform this action."
-msgstr "You don't have permission to perform this action."
+msgstr "Non hai il permesso di eseguire questa azione."
 
 #: ajax\linkSingleHost.php:74
 msgid "linking host failed"
-msgstr "linking host failed"
+msgstr "collegamento dell'host fallito"
 
 #: src\Config.php:44
 msgid "i-Vertix Monitoring settings"
-msgstr "i-Vertix Monitoring settings"
+msgstr "i-Vertix Monitoring impostazioni"
 
 #: templates\config.html.twig:37
 msgid "i-Vertix Monitoring API URL"
@@ -53,7 +53,7 @@ msgstr "Status"
 
 #: templates\host.html.twig:81
 msgid "Name"
-msgstr "Name"
+msgstr "Nome"
 
 #: templates\host.html.twig:87
 msgid "Alias"
@@ -65,19 +65,19 @@ msgstr "FQDN"
 
 #: templates\host.html.twig:99
 msgid "Last check"
-msgstr "Last check"
+msgstr "Ultimo controllo"
 
 #: templates\host.html.twig:105
 msgid "Next check"
-msgstr "Next check"
+msgstr "Prossimo controllo"
 
 #: templates\host.html.twig:111
 msgid "Check period"
-msgstr "Check period"
+msgstr "Periodo di controllo"
 
 #: templates\host.html.twig:143 templates\host.html.twig:156
 msgid "Services"
-msgstr "Services"
+msgstr "Servizi"
 
 #: templates\host.html.twig:146 templates\hosttimeline.html.twig:30
 msgid "Timeline"
@@ -85,28 +85,28 @@ msgstr "Timeline"
 
 #: templates\hosttimeline.html.twig:32
 msgid "1 Day"
-msgstr "1 Day"
+msgstr "1 giorno"
 
 #: templates\hosttimeline.html.twig:33
 msgid "1 Week"
-msgstr "1 Week"
+msgstr "1 settimana"
 
 #: templates\hosttimeline.html.twig:34
 msgid "1 Month"
-msgstr "1 Month"
+msgstr "1 mese"
 
 #: templates\invalidhost.html.twig:30
 msgid "The linked monitoring host does not exist anymore"
-msgstr "The linked monitoring host does not exist anymore"
+msgstr "Il host collegato non esiste piú"
 
 #: templates\noconnection.html.twig:30
 msgid "i-Vertix Monitoring API is not available. Please check connection"
-msgstr "i-Vertix Monitoring API is not available. Please check connection"
+msgstr "L' i-Vertix Monitoring API non é raggiungibile. Controlla la connessione"
 
 #: templates\nohost.html.twig:30
 msgid "No i-Vertix Monitoring host is linked to this item"
-msgstr "No i-Vertix Monitoring host is linked to this item"
+msgstr "Nessun i-Vertix Monitoring host é collegato a questo dispositivo"
 
 #: templates\timeline.html.twig:56
 msgid "No event to show"
-msgstr "No event to show"
+msgstr "Nessun evento da mostrare"
