@@ -15,7 +15,19 @@ Currently, the plugin supports GLPI version 10+ and following asset types:
    from [https://github.com/i-Vertix/glpi-i-vertix-monitoring/releases](https://github.com/i-Vertix/glpi-i-vertix-monitoring/releases).
 2. Extract the archive into the GLPI plugins folder
 3. Verify, that the folder `ivertixmonitoring` is created
-4. Log into GLPI with an admin account and install the plugin
+4. On Linux, make sure the `ivertixmonitoring` folder and all of its subfolders have the following permissions:
+
+    ```bash
+    sudo chown apache:apache -R ./ivertixmonitoring
+    sudo chmod 644 -R ./ivertixmonitoring
+    sudo chmod 755 ./ivertixmonitoring
+    sudo find ./ivertixmonitoring -type d -exec chmod 755 {} +
+    ```
+
+   Basically, the `ivertixmonitoring` plugin folder and all of its subfolders must have the permission level `rwxr-xr-x`
+   (755) and all the files inside `rw-r--r--` (644)
+
+5. Log into GLPI with a super-admin account and install the plugin
 
 ## ⚙️ Plugin Configuration
 
@@ -41,7 +53,7 @@ Additionally, the user **must** have the following settings enabled:
 
 ### Configure the connection to the Monitoring system
 
-To configure the API connection, log into GLPI with an admin account and open the `Setup -> General` page.
+To configure the API connection, log into GLPI with a super-admin account and open the `Setup -> General` page.
 On the new tab `i-Vertix Monitoring settings`, you must configure following information:
 
 - **i-Vertix Monitoring API Url**: the FQDN to your i-Vertix Monitoring API; the domain must be reachable from the *

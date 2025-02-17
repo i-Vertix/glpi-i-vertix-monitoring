@@ -43,20 +43,20 @@ function plugin_ivertixmonitoring_install($version)
     $default_charset   = DBConnection::getDefaultCharset();
     $default_collation = DBConnection::getDefaultCollation();
 
-    $table = Host::getTable();
+    $table = GlpiPlugin\Ivertixmonitoring\Host::getTable();
     if (!$DB->tableExists($table)) {
         $query = "CREATE TABLE `$table` (
-                  `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                  `itemtype`        VARCHAR(100) NOT NULL,
-                  `item_id`         INT(10) UNSIGNED NOT NULL,
-                  `monitoring_id`   INT(10) UNSIGNED NOT NULL,
-                  `monitoring_type` VARCHAR(100) DEFAULT 'host',
-                  PRIMARY KEY  (`id`),
-                  KEY `item_id` (`item_id`)
+                  `id`              int unsigned primary key not null auto_increment,
+                  `itemtype`        varchar(100) not null,
+                  `item_id`         int UNSIGNED not null,
+                  `monitoring_id`   int UNSIGNED not null,
+                  `monitoring_type` varchar(100) default 'host'
                  ) ENGINE=InnoDB
                  DEFAULT CHARSET={$default_charset}
                  COLLATE={$default_collation}";
         $DB->doQuery($query);
+        $DB->doQuery("CREATE INDEX {$table}_index1 ON `$table` (itemtype, item_id);");
+        $DB->doQuery("CREATE INDEX {$table}_index2 ON `$table` (monitoring_type, monitoring_id);");
     }
     return true;
 }
@@ -90,7 +90,7 @@ function plugin_ivertixmonitoring_getAddSearchOptionsNew($itemtype)
 {
     $sopt = [];
 
-    if ($itemtype == 'Computer') {
+    if ($itemtype === 'Computer') {
         $sopt[] = [
             'id'               => 6942,
             'table'            => GlpiPlugin\Ivertixmonitoring\Host::getTable(),

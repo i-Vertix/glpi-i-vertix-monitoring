@@ -53,7 +53,7 @@ function plugin_init_ivertixmonitoring()
 
     $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT]['ivertixmonitoring'] = true;
 
-    $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['ivertixmonitoring'] = '../../front/config.form.php';
+    $PLUGIN_HOOKS['config_page']['ivertixmonitoring'] = '../../front/config.form.php';
 
     $PLUGIN_HOOKS[Hooks::SECURED_CONFIGS]['ivertixmonitoring'] = ['monitoring-password'];
 

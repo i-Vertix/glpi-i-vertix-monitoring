@@ -162,6 +162,14 @@ class Host extends CommonDBTM
                 if ($hostResources['in_downtime']) {
                     $host['downtimes'] = $hostResources['downtimes'];
                 }
+                $statusOrder = [2, 1, 3, 4];
+                $statusOrderMap = array_flip($statusOrder);
+                usort($hostServices["result"], static function ($a, $b) use ($statusOrderMap) {
+                    $posA = $statusOrderMap[$a["state"]] ?? PHP_INT_MAX;
+                    $posB = $statusOrderMap[$b["state"]] ?? PHP_INT_MAX;
+
+                    return $posA <=> $posB;
+                });
                 $host['services'] = $hostServices['result'];
                 $host['nb_services'] = count($host['services']);
                 return $host;
