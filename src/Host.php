@@ -60,21 +60,30 @@ class Host extends CommonDBTM
         return _n('i-Vertix Monitoring', 'i-Vertix Monitoring', $nb);
     }
 
-    public function getAllHosts(): array
+    public function getHostListByHostId(): array
     {
         $api = $this->api_client;
         $connected = $api->authenticate();
         if ($connected === true) {
-            // TODO: PAGING
-            $list = $api->getHosts();
-            if ($list["success"]) {
-                $list = $list["result"];
-                $items = [];
-                foreach ($list["result"] as $item) {
-                    $items[$item["id"]] = $item;
+            $items = [];
+            $page = 0;
+            $limit = 300;
+            do {
+                ++$page;
+                $list = $api->getHosts([
+                    "limit" => $limit,
+                    "page" => $page
+                ]);
+                if ($list["success"]) {
+                    $list = $list["result"];
+                    foreach ($list["result"] as $item) {
+                        $items[$item["id"]] = ["id" => $item["id"], "name" => $item["name"]];
+                    }
+                } else {
+                    break;
                 }
-                return $items;
-            }
+            } while (count($list["result"]) >= $limit);
+            return $items;
         }
         return [];
     }
@@ -480,7 +489,7 @@ class Host extends CommonDBTM
         $obj = [new Computer(), new NetworkEquipment()];
 
         // load monitoring hosts
-        $hosts = $self->getAllHosts();
+        $hosts = $self->getHostListByHostId();
         $hostHashByName = [];
         foreach ($hosts as $host) {
             $hostHashByName[$host["name"]] = $host;
