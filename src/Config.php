@@ -116,6 +116,7 @@ class Config extends Glpi_Config
         } else if (!$all_nok) {
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/checkField.html.twig');
         }
+        return true;
     }
 
     public static function prepareConfigUpdate(\CommonDBTM $item): void
