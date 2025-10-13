@@ -36,12 +36,12 @@
         <div class="mb-3">
             <label class="form-label" for="monitoring-url">{{ __("i-Vertix Monitoring API URL") }}</label>
             <input type="text" class="form-control" name="monitoring-url" id="monitoring-url"
-                   placeholder="https://<fqdn>/centreon/api/latest/" value="{{ current_config['monitoring-url'] }}">
+                   placeholder="https://<fqdn>/centreon/api/latest/" value="{{ current_config['monitoring-url'] ?? "" }}">
         </div>
         <div class="mb-3">
             <label class="form-label" for="monitoring-username">{{ __("Monitoring username") }}</label>
             <input type="text" class="form-control" name="monitoring-username" id="monitoring-username"
-                   placeholder="Username" value="{{ current_config['monitoring-username'] }}">
+                   placeholder="Username" value="{{ current_config['monitoring-username'] ?? "" }}">
         </div>
         <div class="mb-3">
             <label class="form-label" for="monitoring-password">{{ __("Monitoring password") }}</label>
@@ -52,7 +52,7 @@
             {{ fields.dropdownYesNo(
                 'monitoring-sync',
                 current_config['monitoring-sync'],
-                __('Sync asset link to monitoring'),
+                __('Sync asset link to monitoring', 'ivertixmonitoring'),
                 field_options
             ) }}
         </div>

@@ -30,8 +30,6 @@
 
 use GlpiPlugin\Ivertixmonitoring\Host;
 
-include('../../../inc/includes.php');
-
 Session::checkRight('computer', READ);
 
 Html::header(
@@ -41,5 +39,5 @@ Html::header(
     Host::class,
     'Host',
 );
-\Search::show(Host::class);
-\Html::footer();
+Search::show(Host::class);
+Html::footer();

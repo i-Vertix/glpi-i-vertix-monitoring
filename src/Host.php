@@ -40,6 +40,8 @@ use Html;
 use NetworkEquipment;
 use Plugin;
 use Glpi\Application\View\TemplateRenderer;
+use function Safe\json_encode;
+use function Safe\strtotime;
 
 class Host extends CommonDBTM
 {
@@ -548,6 +550,7 @@ class Host extends CommonDBTM
                     }
                 } else {
                     // host is not linked
+                    continue;
                 }
             }
         }
@@ -566,7 +569,12 @@ class Host extends CommonDBTM
                 ],
             );
 
-            return self::createTabEntry(self::getTypeName($nb), $nb);
+            return self::createTabEntry(
+                self::getTypeName($nb),
+                $nb,
+                $item::getType(),
+                'ti ti-heart-rate-monitor'
+            );
         }
 
         return '';

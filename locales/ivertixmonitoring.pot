@@ -1,0 +1,224 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-10-13 16:11+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: templates/ackModal.html.twig
+msgid "Acknowledge problem"
+msgstr ""
+
+#: templates/ackModal.html.twig templates/downtimeModal.html.twig
+msgid "Comment"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid ""
+"If checked, a notification is sent to the contacts linked to the object to "
+"warn that the incident on the resource has been acknowledged"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid "Sticky"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid "Persistent"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid "Acknowledge services attached to host"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid "Acknowledged by"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid "It may take some time for the problem to be acknowledged"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid "Host problem acknowledged"
+msgstr ""
+
+#: templates/ackModal.html.twig
+msgid "Failed to acknowledge host problem"
+msgstr ""
+
+#: templates/checkField.html.twig
+msgid "A field is missing!"
+msgstr ""
+
+#: templates/checkField.html.twig
+msgid "Please check again"
+msgstr ""
+
+#: templates/config.html.twig
+msgid "Sync asset link to monitoring"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "Set downtime"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "fixed"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "Duration"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "seconds"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "minutes"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "hours"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "Set downtime on services attached to host"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "Downtime set by"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "It may take some time for the downtime to appear"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "Downtime set"
+msgstr ""
+
+#: templates/downtimeModal.html.twig
+msgid "Failed to set the downtime"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Check"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Downtime"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Acknowledge"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Next check"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Check period"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Host in downtime"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "From :"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "To :"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Author name :"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Comment :"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Cancel"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Services"
+msgstr ""
+
+#: templates/host.html.twig templates/hosttimeline.html.twig
+msgid "Timeline"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Host check sent"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Failed to send host check"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "It may take some time for the downtime to disappear"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Downtime canceled"
+msgstr ""
+
+#: templates/host.html.twig
+msgid "Failed to cancel the downtime"
+msgstr ""
+
+#: templates/invalidhost.html.twig
+msgid "The linked monitoring host does not exist anymore"
+msgstr ""
+
+#: templates/noconnection.html.twig
+msgid "i-Vertix Monitoring API is not available. Please check connection"
+msgstr ""
+
+#: templates/nohost.html.twig
+msgid "No i-Vertix Monitoring host is linked to this item"
+msgstr ""
+
+#: templates/selecthost.html.twig
+msgid "Linekd host"
+msgstr ""
+
+#: templates/syncAll.html.twig
+msgid "Sync all assets to monitoring"
+msgstr ""
+
+#: templates/syncAll.html.twig
+msgid "Automatically link assets to monitoring hosts (by name)"
+msgstr ""
+
+#: templates/timeline.html.twig
+msgid "No event to show"
+msgstr ""
+
+#: hook.php:98
+msgid "i-Vertix Monitoring Host Status"
+msgstr ""
+
+#: src/Config.php:43
+msgid "i-Vertix Monitoring settings"
+msgstr ""

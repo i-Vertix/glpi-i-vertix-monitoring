@@ -102,13 +102,13 @@
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Next check") }}</div>
+                <div class="datagrid-title fw-bold">{{ __("Next check", 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.next_check }}</div>
             </div>
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Check period") }}</div>
+                <div class="datagrid-title fw-bold">{{ __("Check period", 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.check_period }}</div>
             </div>
         </div>
@@ -123,10 +123,10 @@
                     <div class="card-status-start bg-red"></div>
                     <div class="card-body">
                         <h3 class="card-title m-0 text-truncate">{{ __('Host in downtime', 'ivertixmonitoring') }}</h3>
-                        <div>{{ __('From : ', 'ivertixmonitoring') }}{{ downtime.start_time }}</div>
-                        <div>{{ __('To : ', 'ivertixmonitoring') }}{{ downtime.end_time }}</div>
-                        <div>{{ __('Author name : ', 'ivertixmonitoring') }}{{ downtime.author_name }}</div>
-                        <div>{{ __('Comment : ', 'ivertixmonitoring') }}{{ downtime.comment }}</div>
+                        <div>{{ __('From :', 'ivertixmonitoring') }} {{ downtime.start_time }}</div>
+                        <div>{{ __('To :', 'ivertixmonitoring') }} {{ downtime.end_time }}</div>
+                        <div>{{ __('Author name :', 'ivertixmonitoring') }} {{ downtime.author_name }}</div>
+                        <div>{{ __('Comment :', 'ivertixmonitoring') }} {{ downtime.comment }}</div>
                         <button class="btn mt-2"
                                 id="cancel_downtime_{{ downtime.id }}">{{ __('Cancel', 'ivertixmonitoring') }}</button>
                     </div>
@@ -140,10 +140,10 @@
     <div class="card-header">
         <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
             <li class="nav-item">
-                <a href="#tabs-services-ex1" class="nav-link active" data-bs-toggle="tab">{{ __("Services") }}</a>
+                <a href="#tabs-services-ex1" class="nav-link active" data-bs-toggle="tab">{{ __("Services", 'ivertixmonitoring') }}</a>
             </li>
             <li class="nav-item">
-                <a href="#tabs-historique-ex1" class="nav-link" data-bs-toggle="tab">{{ __("Timeline") }}</a>
+                <a href="#tabs-historique-ex1" class="nav-link" data-bs-toggle="tab">{{ __("Timeline", 'ivertixmonitoring') }}</a>
             </li>
         </ul>
     </div>
@@ -153,7 +153,7 @@
     <div class="tab-content">
         <div class="tab-pane active show" id="tabs-services-ex1">
             <div class="d-flex flew-row align-items-center p-2 mt-3">
-                <h2 class="pe-3 m-0">{{ __("Services") }}</h2>
+                <h2 class="pe-3 m-0">{{ __("Services", 'ivertixmonitoring') }}</h2>
                 {% set count_ok = 0 %}
                 {% set count_w = 0 %}
                 {% set count_d = 0 %}

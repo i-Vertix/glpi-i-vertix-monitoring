@@ -138,7 +138,7 @@ one from the combo box.
 ![asset link in monitoring system](readme/monitoring_link.png)
 
 All monitoring hosts, which are linked to an asset have a weblink of the connected asset as a note.
-The weblink is only created, when *Sync asset link to monitoring* is enabled in
+The weblink is only created when *Sync asset link to monitoring* is enabled in
 the [plugin configuration](#configure-the-connection-to-the-monitoring-system).
 
 The weblink is available on the *Resource Status* page of your connected i-Vertix Monitoring solution.
@@ -146,17 +146,31 @@ Remember to enable the list-column *Notes* in the list configuration (see image 
 
 ## Translation
 
-To translate strings used in the plugin, we use xgettext to extract the strings from `.php` and `.html.twig` files.
-We created a special powershell script located in `locales/` which scans the whole project directory for such files.
+To translate strings used in the plugin, we use GLPI's `extract-locales` script which is part of the `glpi-project/tools`
+package to extract the strings from `.php` and `.html.twig` files.
 
-*The script must be executed from the plugin root directory!*
+The script requires:
 
-Command to execute the script:
+- PHP (8.2+)
+- xgettext
+- msginit
+- node & npm (when using vue)
 
-```bash
+Normally the script should be executed in a linux environment.
+To execute it in a *Windows* environment, you have two possibilities:
 
-powershell -ExecutionPolicy Bypass -File "<script directory>\xgettext.ps1" -Exe "<path to xgettext.exe>" -Output ".\locales\i-vertix-monitoring.pot"
+1. Use **Git Bash**
 
-```
+    By default, *Git Bash* comes along with xgettext but is missing msginit. To install msginit into *Git Bash*, 
+    download the gettext binaries from
+    [https://mlocati.github.io/articles/gettext-iconv-windows.html](https://mlocati.github.io/articles/gettext-iconv-windows.html)
+    and copy `<unzipped gettext binaries>\bin\msginit.exe` to `C:\Program Files\Git\usr\bin`.
+    Then, launch *Git Bash* and execute the script located in: `<project root>/vendor/bin/extract-locales`
 
-The script will output a .pot file which can be used to update the translations.
+    ```bash
+    ./vendor/bin/extract-locales
+    ```
+
+2. Use **cygwin**
+
+The script will output `ivertixmonitoring.pot` located in `locales/` which can be used to update the translations.

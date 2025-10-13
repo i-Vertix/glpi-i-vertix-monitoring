@@ -36,6 +36,8 @@ include('../../../inc/includes.php');
 header('Content-Type: text/html; charset=UTF-8');
 Html::header_nocache();
 
+Session::checkLoginUser();
+
 $itemId = $_GET["item_id"] ?? null;
 $itemType = $_GET["itemtype"] ?? null;
 $startTime = $_POST["start_time"] ?? null;

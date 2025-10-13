@@ -43,7 +43,7 @@ function plugin_ivertixmonitoring_install($version)
     $default_charset   = DBConnection::getDefaultCharset();
     $default_collation = DBConnection::getDefaultCollation();
 
-    $table = GlpiPlugin\Ivertixmonitoring\Host::getTable();
+    $table = Host::getTable();
     if (!$DB->tableExists($table)) {
         $query = "CREATE TABLE `$table` (
                   `id`              int unsigned primary key not null auto_increment,
@@ -71,7 +71,7 @@ function plugin_ivertixmonitoring_uninstall()
     /** @var DBmysql $DB */
     global $DB;
 
-    $tables = [GlpiPlugin\Ivertixmonitoring\Host::getTable(), ];
+    $tables = [Host::getTable(), ];
 
     foreach ($tables as $table) {
         $migration = new Migration(PLUGIN_IVERTIXMONITORING_VERSION);
@@ -80,7 +80,7 @@ function plugin_ivertixmonitoring_uninstall()
         $DB->error();
     }
 
-    $config = new \Config();
+    $config = new Config();
     $config->deleteByCriteria(['context' => 'plugin:ivertixmonitoring']);
 
     return true;
@@ -93,7 +93,7 @@ function plugin_ivertixmonitoring_getAddSearchOptionsNew($itemtype)
     if ($itemtype === 'Computer') {
         $sopt[] = [
             'id'               => 6942,
-            'table'            => GlpiPlugin\Ivertixmonitoring\Host::getTable(),
+            'table'            => Host::getTable(),
             'field'            => 'id',
             'name'             => __('i-Vertix Monitoring Host Status', 'ivertixmonitoring'),
             'additionalfields' => ['monitoring_id'],

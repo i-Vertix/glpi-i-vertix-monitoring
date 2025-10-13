@@ -30,8 +30,12 @@
 
 namespace GlpiPlugin\Ivertixmonitoring;
 
+use Exception;
 use GuzzleHttp\Client;
 use GLPIKey;
+
+use function Safe\json_decode;
+use function Safe\json_encode;
 
 class ApiClient
 {
@@ -128,7 +132,7 @@ class ApiClient
 
         try {
             $result = $api_client->request($method, $endpoint, $params);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ["success" => false, "result" => $e->getMessage()];
         }
         $code = $result->getStatusCode();
