@@ -29,7 +29,9 @@
  */
 
 use Glpi\Application\View\TemplateRenderer;
-use Glpi\Http\Response;
+use Glpi\Exception\Http\AccessDeniedHttpException;
+use Glpi\Exception\Http\BadRequestHttpException;
+use Glpi\Exception\Http\NotFoundHttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 header('Content-Type: text/html; charset=UTF-8');
@@ -42,24 +44,26 @@ $itemType = $_GET["itemtype"] ?? null;
 $period = $_GET["period"] ?? null;
 
 if (!isset($itemType)) {
-    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
+    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
 }
 
 if (!isset($itemId) || !is_numeric($itemId)) {
-    Response::sendError(400, "Missing or invalid parameter: 'item_id'");
-} else {
-    $itemId = (int)Toolbox::cleanInteger($itemId);
+    throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
 }
 
+$itemId = (int)Toolbox::cleanInteger($itemId);
+
 if (!isset($period) || !in_array($period, ["day", "week", "month"], true)) {
-    Response::sendError(400, "Missing or invalid parameter: 'period'");
+    throw new BadRequestHttpException("Missing or invalid parameter: 'period'");
 }
 
 $item = getItemForItemtype($itemType);
 if ($item === false) {
-    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
-} else if (!$item->can($itemId, READ)) {
-    Response::sendError(404, __("You don't have permission to perform this action."));
+    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
+}
+
+if (!$item->can($itemId, READ)) {
+    throw new AccessDeniedHttpException("You don't have permission to perform this action.");
 }
 
 $host = new Host();
@@ -69,5 +73,5 @@ if ($host->isItemLinked($itemId, $itemType)) {
         'timeline' => $timeline,
     ]);
 } else {
-    Response::sendError(404, "No linked monitoring host found for item");
+    throw new NotFoundHttpException("No linked monitoring host found for item");
 }

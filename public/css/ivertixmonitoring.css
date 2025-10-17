@@ -1,0 +1,3 @@
+.status {
+    --tblr-status-color: rgb(var(--tblr-status-color-rgb)) !important;
+}

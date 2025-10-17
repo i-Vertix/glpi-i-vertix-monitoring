@@ -112,7 +112,6 @@
 
 
 <script>
-    debugger;
 
     const resetAckModal = () => {
         $("#form-ack").trigger("reset");
@@ -131,8 +130,7 @@
         });
         $.ajax({
             "type": 'POST',
-            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
-                + "/ajax/ack.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/ack.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
             "data": data,
             "success": function (result) {
                 glpi_toast_info("{{ __('It may take some time for the problem to be acknowledged', 'ivertixmonitoring') }}", "{{ __('Host problem acknowledged', 'ivertixmonitoring') }}");

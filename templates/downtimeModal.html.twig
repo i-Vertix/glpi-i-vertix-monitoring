@@ -109,7 +109,6 @@
 </div>
 
 <script>
-    debugger;
 
     const resetDowntimeModal = () => {
         $("#form-set-downtime").trigger("reset");
@@ -143,8 +142,7 @@
         });
         $.ajax({
             "type": 'POST',
-            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
-                + "/ajax/setDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/setDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
             "data": data,
             "success": function (result) {
                 glpi_toast_info("{{ __('It may take some time for the downtime to appear', 'ivertixmonitoring') }}", "{{ __('Downtime set', 'ivertixmonitoring') }}");

@@ -42,7 +42,7 @@
         const loadTimeline = (period) => {
             $('#p-timeline')
                 .html('<i class="fas fa-3x fa-spinner fa-spin ms-auto"></i>')
-                .load(CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/hostTimeline.php?period=" + period
+                .load(CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/hostTimeline.php?period=" + period
                     + "&itemtype={{ itemtype }}&item_id={{ item_id }}");
             $('#timeline-btn .btn').removeClass('btn-secondary').addClass('btn-outline-secondary');
             $(`#t-${period}`).removeClass('btn-outline-secondary').addClass('btn-secondary');

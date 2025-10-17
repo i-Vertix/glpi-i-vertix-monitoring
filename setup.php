@@ -61,6 +61,15 @@ function plugin_init_ivertixmonitoring()
         ],
     ];
 
+    // status fixer (glpi overwrites status color from status-green ecc)
+    if (
+        str_contains($_SERVER['REQUEST_URI'] ?? '', Config::getFormURL())
+        || str_contains($_SERVER['REQUEST_URI'] ?? '', Computer::getFormURL())
+        || str_contains($_SERVER['REQUEST_URI'] ?? '', NetworkEquipment::getFormURL())
+    ) {
+        $PLUGIN_HOOKS[Hooks::ADD_CSS]['ivertixmonitoring'] = 'css/ivertixmonitoring.css';
+    }
+
 
     Plugin::registerClass(GlpiPlugin\Ivertixmonitoring\Host::class, [
         'addtabon' => ['Computer', 'NetworkEquipment'],
@@ -81,11 +90,11 @@ function plugin_init_ivertixmonitoring()
 function plugin_version_ivertixmonitoring()
 {
     return [
-        'name'         => 'i-Vertix Monitoring',
-        'version'      => PLUGIN_IVERTIXMONITORING_VERSION,
-        'author'       => '<a href="https://i-vertix.com">i-Vertix</a>, <a href="https://www.teclib.com">Teclib\'</a>',
-        'license'      => 'GPLv3',
-        'homepage'     => '',
+        'name' => 'i-Vertix Monitoring',
+        'version' => PLUGIN_IVERTIXMONITORING_VERSION,
+        'author' => '<a href="https://i-vertix.com">i-Vertix</a>',
+        'license' => 'GPLv3',
+        'homepage' => '',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_IVERTIXMONITORING_MIN_GLPI_VERSION,

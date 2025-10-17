@@ -28,7 +28,10 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Http\Response;
+use Glpi\Exception\Http\AccessDeniedHttpException;
+use Glpi\Exception\Http\BadRequestHttpException;
+use Glpi\Exception\Http\NotFoundHttpException;
+use Glpi\Exception\Http\HttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 header('Content-Type: text/html; charset=UTF-8');
@@ -41,34 +44,36 @@ $itemType = $_GET["itemtype"] ?? null;
 $downtimeId = $_POST["downtime_id"] ?? null;
 
 if (!isset($itemType)) {
-    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
+    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
 }
 
 if (!isset($itemId) || !is_numeric($itemId)) {
-    Response::sendError(400, "Missing or invalid parameter: 'item_id'");
-} else {
-    $itemId = (int)Toolbox::cleanInteger($itemId);
+    throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
 }
 
+$itemId = (int)Toolbox::cleanInteger($itemId);
+
 if (!isset($downtimeId) || !is_numeric($downtimeId)) {
-    Response::sendError(400, "Missing or invalid parameter: 'downtime_id");
-} else {
-    $downtimeId = (int)Toolbox::cleanInteger($downtimeId);
+    throw new BadRequestHttpException("Missing or invalid parameter: 'downtime_id'");
 }
+
+$downtimeId = (int)Toolbox::cleanInteger($downtimeId);
 
 $item = getItemForItemtype($itemType);
 if ($item === false) {
-    Response::sendError(400, "Missing or invalid parameter: 'itemtype'");
-} else if (!$item->can($itemId, UPDATE)) {
-    Response::sendError(404, __("You don't have permission to perform this action."));
+    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
+}
+
+if (!$item->can($itemId, UPDATE)) {
+    throw new AccessDeniedHttpException("You don't have permission to perform this action.");
 }
 
 $host  = new Host();
 if ($host->isItemLinked($itemId, $itemType)) {
     if (!$host->cancelDowntime($downtimeId)) {
-        Response::sendError(500, "Request failed");
+        throw new HttpException(500, "Request failed");
     }
     die("Request completed");
-} else {
-    Response::sendError(404, "No linked monitoring host found for item");
 }
+
+throw new NotFoundHttpException("No linked monitoring host found for item");

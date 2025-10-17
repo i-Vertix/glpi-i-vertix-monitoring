@@ -215,16 +215,14 @@
 </div>
 
 <script>
-    debugger;
     $(document).ready(function () {
-
+        // debugger;
 
         $('#button-check').click(function () {
             $('#button-check').prop('disabled', true);
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
-                    + "/ajax/sendCheck.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+                "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/sendCheck.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
                 "success": function (result) {
                     $('#button-check').prop('disabled', false);
                     glpi_toast_info("{{ __('Host check sent', 'ivertixmonitoring') }}");
@@ -255,8 +253,7 @@
             $('#cancel_downtime_{{ downtime.id }}').prop('disabled', true);
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
-                    + "/ajax/cancelDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+                "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/cancelDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
                 "data": {
                     "downtime_id": {{ downtime.id }}
                 },

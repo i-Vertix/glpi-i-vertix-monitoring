@@ -41,4 +41,4 @@ Session::checkRight('networking', UPDATE);
 
 
 $host = new Host();
-echo json_encode("Synced " . $host->linkAll() . " assets with i-Vertix Monitoring");
+echo json_encode("Synced " . $host::linkAll() . " assets with i-Vertix Monitoring");

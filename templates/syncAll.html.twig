@@ -43,7 +43,7 @@
             $('#icon').toggleClass("fa-spin");
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring + "/ajax/linkAllHosts.php",
+                "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/linkAllHosts.php",
                 "success": function (result) {
                     $('#button-sync').prop('disabled', false);
                     $('#icon').toggleClass("fa-spin");

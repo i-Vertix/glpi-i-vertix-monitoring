@@ -132,5 +132,18 @@ class Config extends Glpi_Config
         ) {
             unset($item->input['monitoring-password']);
         }
+        if (!empty($item->input['monitoring-url'])) {
+            $item->input['monitoring-url'] = trim($item->input['monitoring-url']);
+            if (!str_ends_with($item->input['monitoring-url'], '/')) {
+                $item->input['monitoring-url'] .= '/';
+            }
+//            if (!str_ends_with($item->input['monitoring-url'], 'api/latest/')) {
+//                if (!str_ends_with($item->input['monitoring-url'], 'api/')) {
+//                    $item->input['monitoring-url'] .= 'api/latest/';
+//                } else {
+//                    $item->input['monitoring-url'] .= 'latest/';
+//                }
+//            }
+        }
     }
 }
