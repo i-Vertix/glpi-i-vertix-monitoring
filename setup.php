@@ -28,17 +28,16 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_IVERTIXMONITORING_VERSION', '10.0.0');
-
-// Minimal GLPI version, inclusive
-define('PLUGIN_IVERTIXMONITORING_MIN_GLPI_VERSION', '10.0.0');
-// Maximum GLPI version, exclusive
-define('PLUGIN_IVERTIXMONITORING_MAX_GLPI_VERSION', '10.0.99');
-// Define the plugin directory
-define('IVERTIXMONITORING_DIR_PATH', __DIR__);
-
 use Glpi\Plugin\Hooks;
 
+define('PLUGIN_IVERTIXMONITORING_VERSION', '11.0.0');
+
+// Minimal GLPI version, inclusive
+define('PLUGIN_IVERTIXMONITORING_MIN_GLPI_VERSION', '11.0.0');
+// Maximum GLPI version, exclusive
+define('PLUGIN_IVERTIXMONITORING_MAX_GLPI_VERSION', '11.0.99');
+// Define the plugin directory
+define('IVERTIXMONITORING_DIR_PATH', __DIR__);
 
 /**
  * Init hooks of the plugin.
@@ -51,18 +50,25 @@ function plugin_init_ivertixmonitoring()
     /** @var array $PLUGIN_HOOKS */
     global $PLUGIN_HOOKS;
 
-    $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT]['ivertixmonitoring'] = true;
-
-    $PLUGIN_HOOKS['config_page']['ivertixmonitoring'] = '../../front/config.form.php';
+    $PLUGIN_HOOKS['config_page']['ivertixmonitoring'] = '../../front/config.form.php?forcetab=GlpiPlugin\Ivertixmonitoring\Config$1';
 
     $PLUGIN_HOOKS[Hooks::SECURED_CONFIGS]['ivertixmonitoring'] = ['monitoring-password'];
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['ivertixmonitoring'] = [
-        \Config::class => [
+        Config::class => [
             GlpiPlugin\Ivertixmonitoring\Config::class,
             'prepareConfigUpdate',
         ],
     ];
+
+    // status fixer (glpi overwrites status color from status-green ecc)
+    if (
+        str_contains($_SERVER['REQUEST_URI'] ?? '', Config::getFormURL())
+        || str_contains($_SERVER['REQUEST_URI'] ?? '', Computer::getFormURL())
+        || str_contains($_SERVER['REQUEST_URI'] ?? '', NetworkEquipment::getFormURL())
+    ) {
+        $PLUGIN_HOOKS[Hooks::ADD_CSS]['ivertixmonitoring'] = 'css/ivertixmonitoring.css';
+    }
 
 
     Plugin::registerClass(GlpiPlugin\Ivertixmonitoring\Host::class, [
@@ -84,11 +90,11 @@ function plugin_init_ivertixmonitoring()
 function plugin_version_ivertixmonitoring()
 {
     return [
-        'name'         => 'i-Vertix Monitoring',
-        'version'      => PLUGIN_IVERTIXMONITORING_VERSION,
-        'author'       => '<a href="https://i-vertix.com">i-Vertix</a>, <a href="https://www.teclib.com">Teclib\'</a>',
-        'license'      => 'GPLv3',
-        'homepage'     => '',
+        'name' => 'i-Vertix Monitoring',
+        'version' => PLUGIN_IVERTIXMONITORING_VERSION,
+        'author' => '<a href="https://i-vertix.com">i-Vertix</a>',
+        'license' => 'GPLv3',
+        'homepage' => '',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_IVERTIXMONITORING_MIN_GLPI_VERSION,

@@ -26,32 +26,31 @@
 # -------------------------------------------------------------------------
 #}
 
+<div class="d-flex flew-row align-items-center py-3 ps-2">
+    <label class="form-label pe-3 m-0" for="{{ host_dropdown_id }}">{{ __('Linekd host', 'ivertixmonitoring') }}</label>
+    {{ host_dropdown|raw }}
+</div>
+
 <script>
-    const onHostChange = (e) => {
-        const selected = $(`#${e.currentTarget.id}`).select2('data')[0]?.id;
+    function onHostChange{{ rand }}(val) {
+        if (!val) return;
         // link host using ajax post
         $.ajax({
             "type": 'POST',
-            "url": CFG_GLPI['root_doc'] + "/" + GLPI_PLUGINS_PATH.ivertixmonitoring
-                + "/ajax/linkSingleHost.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/linkSingleHost.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
             "data": {
-                "host_id": selected ?? "",
+                "host_id": val ?? "",
             },
             "success": function (result) {
                 console.log('item linked to host:', result);
-                $(`#${e.currentTarget.id}`).select2('close');
+                $(`#{{ host_dropdown_id }}`).select2('close');
                 reloadTab();
             },
             "error": function (result) {
                 console.log('linking failed:', result);
-                $(`#${e.currentTarget.id}`).select2('close');
+                $(`#{{ host_dropdown_id }}`).select2('close');
                 reloadTab();
             }
         });
     }
 </script>
-
-<div class="d-flex flew-row align-items-center py-3 ps-2">
-    <label class="form-label pe-3 m-0" for="{{ host_dropdown_id }}">{{ __('Linekd host', 'ivertixmonitoring') }}</label>
-    {{ host_dropdown|raw }}
-</div>

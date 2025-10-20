@@ -30,11 +30,10 @@
 
 namespace GlpiPlugin\Ivertixmonitoring;
 
+use CommonDBTM;
 use CommonGLPI;
 use Glpi\Application\View\TemplateRenderer;
 use Session;
-use GlpiPlugin\Ivertixmonitoring\ApiClient;
-use Toolbox;
 use Config as Glpi_Config;
 
 class Config extends Glpi_Config
@@ -46,14 +45,19 @@ class Config extends Glpi_Config
 
     public static function getConfig()
     {
-        return \Config::getConfigurationValues('plugin:ivertixmonitoring');
+        return Glpi_Config::getConfigurationValues('plugin:ivertixmonitoring');
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
         switch ($item->getType()) {
-            case \Config::class:
-                return self::createTabEntry(self::getTypeName());
+            case Glpi_Config::class:
+                return self::createTabEntry(
+                    self::getTypeName(),
+                    0,
+                    $item::getType(),
+                    'ti ti-heart-rate-monitor'
+                );
         }
 
         return '';
@@ -61,17 +65,18 @@ class Config extends Glpi_Config
 
     public static function displayTabContentForItem(
         CommonGLPI $item,
-        $tabnum = 1,
-        $withtemplate = 0
-    ) {
-        if ($item instanceof \Config) {
+                   $tabnum = 1,
+                   $withtemplate = 0
+    )
+    {
+        if ($item instanceof Glpi_Config) {
             return self::showForConfig($item, $withtemplate);
         }
 
         return true;
     }
 
-    public static function showForConfig(\Config $config, $withtemplate = 0)
+    public static function showForConfig(Glpi_Config $config, $withtemplate = 0)
     {
         /** @var array $CFG_GLPI */
         global $CFG_GLPI;
@@ -81,12 +86,12 @@ class Config extends Glpi_Config
         }
 
         $current_config = self::getConfig();
-        $canedit        = Session::haveRight(self::$rightname, UPDATE);
+        $canedit = Session::haveRight(self::$rightname, UPDATE);
 
         TemplateRenderer::getInstance()->display('@ivertixmonitoring/config.html.twig', [
-            'item'           => $config,
+            'item' => $config,
             'current_config' => $current_config,
-            'can_edit'       => $canedit,
+            'can_edit' => $canedit,
         ]);
 
         $conf_ok = true;
@@ -101,7 +106,7 @@ class Config extends Glpi_Config
         }
         if (empty($current_config)) $conf_ok = false;
         if ($conf_ok === true) {
-            $api  = new ApiClient();
+            $api = new ApiClient();
             $connected = $api->authenticate();
 
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/diagnostic.html.twig', [
@@ -116,15 +121,29 @@ class Config extends Glpi_Config
         } else if (!$all_nok) {
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/checkField.html.twig');
         }
+        return true;
     }
 
-    public static function prepareConfigUpdate(\CommonDBTM $item): void
+    public static function prepareConfigUpdate(CommonDBTM $item): void
     {
         if (
             isset($item->input['monitoring-password'])
             && ($item->input['monitoring-password'] === '')
         ) {
             unset($item->input['monitoring-password']);
+        }
+        if (!empty($item->input['monitoring-url'])) {
+            $item->input['monitoring-url'] = trim($item->input['monitoring-url']);
+            if (!str_ends_with($item->input['monitoring-url'], '/')) {
+                $item->input['monitoring-url'] .= '/';
+            }
+//            if (!str_ends_with($item->input['monitoring-url'], 'api/latest/')) {
+//                if (!str_ends_with($item->input['monitoring-url'], 'api/')) {
+//                    $item->input['monitoring-url'] .= 'api/latest/';
+//                } else {
+//                    $item->input['monitoring-url'] .= 'latest/';
+//                }
+//            }
         }
     }
 }

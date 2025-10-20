@@ -30,13 +30,10 @@
 
 use GlpiPlugin\Ivertixmonitoring\Host;
 
-include('../../../inc/includes.php');
-
 header("Content-Type: application/json; charset=UTF-8");
 Html::header_nocache();
 
 Session::checkLoginUser();
-
 Session::checkSeveralRightsOr(['computer' => UPDATE, 'networking' => UPDATE]);
 
 $hosts = Host::getHostList(

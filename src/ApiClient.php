@@ -30,20 +30,34 @@
 
 namespace GlpiPlugin\Ivertixmonitoring;
 
+use Exception;
 use GuzzleHttp\Client;
 use GLPIKey;
+
+use GuzzleHttp\Exception\GuzzleException;
+use Safe\Exceptions\JsonException;
+use function Safe\json_decode;
+use function Safe\json_encode;
 
 class ApiClient
 {
     public ?array $auth = null;
     public array $api_config = [];
 
+    /**
+     * @return void
+     */
     public function monitoringConfig(): void
     {
         $api_i = new Config();
         $this->api_config = $api_i::getConfig();
     }
 
+    /**
+     * @return array|null
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getAuthUser(): ?array
     {
         $connected = $this->authenticate();
@@ -57,6 +71,11 @@ class ApiClient
         ];
     }
 
+    /**
+     * @return bool
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function authenticate(): bool
     {
         if (isset($this->auth)) {
@@ -89,6 +108,11 @@ class ApiClient
         return true;
     }
 
+    /**
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function diagnostic(): array
     {
         $test = $this->authenticate();
@@ -108,6 +132,14 @@ class ApiClient
         return $result;
     }
 
+    /**
+     * @param string $endpoint
+     * @param array $params
+     * @param string $method
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function clientRequest(string $endpoint = '', array $params = [], string $method = 'GET'): array
     {
         $this->monitoringConfig();
@@ -128,13 +160,23 @@ class ApiClient
 
         try {
             $result = $api_client->request($method, $endpoint, $params);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ["success" => false, "result" => $e->getMessage()];
         }
         $code = $result->getStatusCode();
-        return ["success" => $code >= 200 && $code < 300, "result" => json_decode($result->getBody(), true)];
+        $body = (string)$result->getBody();
+        if ($body !== "") {
+            $body = json_decode($body, true);
+        }
+        return ["success" => $code >= 200 && $code < 300, "result" => $body];
     }
 
+    /**
+     * @param array|null $query
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getHosts(array $query = null): array
     {
         $params = [];
@@ -144,54 +186,118 @@ class ApiClient
         return $this->clientRequest('monitoring/hosts', $params);
     }
 
+    /**
+     * @param int $hostId
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getHostById(int $hostId): array
     {
         return $this->clientRequest('monitoring/hosts/' . $hostId);
     }
 
+    /**
+     * @param int $hostId
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getHostResourceDetailById(int $hostId): array
     {
         return $this->clientRequest('monitoring/resources/hosts/' . $hostId);
     }
 
+    /**
+     * @param int $hostId
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getHostTimelineById(int $hostId): array
     {
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/timeline');
     }
 
+    /**
+     * @param array $params
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getServicesList(array $params = []): array
     {
         return $this->clientRequest('monitoring/services', $params);
     }
 
+    /**
+     * @param int $hostId
+     * @param int $limit
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getServicesByHostId(int $hostId, int $limit = 30): array
     {
         $params['query'] = ['limit' => $limit];
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/services', $params);
     }
 
+    /**
+     * @param int $hostId
+     * @param bool $isForced
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function sendHostCheck(int $hostId, bool $isForced = true): array
     {
         $params['json']['is_forced'] = $isForced;
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/check', $params, 'POST');
     }
 
+    /**
+     * @param int $hostId
+     * @param array $downtime
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function setHostDowntime(int $hostId, array $downtime): array
     {
         $params["json"] = $downtime;
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes', $params, 'POST');
     }
 
+    /**
+     * @param int $hostId
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getHostDowntimes(int $hostId): array
     {
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes');
     }
 
+    /**
+     * @param int $downtimeId
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getDowntimeById(int $downtimeId): array
     {
         return $this->clientRequest('monitoring/downtimes/' . $downtimeId);
     }
 
+    /**
+     * @param int $hostId
+     * @param int $limit
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function getServiceDowntimesByHostId(int $hostId, int $limit = 30): array
     {
         $params = [
@@ -209,17 +315,37 @@ class ApiClient
         return $this->clientRequest('monitoring/services/downtimes', $params);
     }
 
+    /**
+     * @param int $downtimeId
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function cancelDowntimeById(int $downtimeId): array
     {
         return $this->clientRequest('monitoring/downtimes/' . $downtimeId, [], 'DELETE');
     }
 
+    /**
+     * @param int $hostId
+     * @param array $acknowledge
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function acknowledgeHostById(int $hostId, array $acknowledge): array
     {
         $params["json"] = $acknowledge;
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/acknowledgements', $params, 'POST');
     }
 
+    /**
+     * @param int $hostId
+     * @param array $hostFields
+     * @return array
+     * @throws GuzzleException
+     * @throws JsonException
+     */
     public function updateHost(int $hostId, array $hostFields): array
     {
         $params["json"] = $hostFields;

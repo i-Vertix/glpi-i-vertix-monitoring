@@ -38,8 +38,9 @@ use DateTimeZone;
 use Dropdown;
 use Html;
 use NetworkEquipment;
-use Plugin;
 use Glpi\Application\View\TemplateRenderer;
+use function Safe\json_encode;
+use function Safe\strtotime;
 
 class Host extends CommonDBTM
 {
@@ -296,7 +297,7 @@ class Host extends CommonDBTM
         return (new DateTime($date, $timezone))->format(DATE_ATOM);
     }
 
-    public static function diffDateInSeconds($date1, $date2)
+    public static function diffDateInSeconds($date1, $date2): float|int
     {
         $ts1 = strtotime($date1);
         $ts2 = strtotime($date2);
@@ -548,6 +549,7 @@ class Host extends CommonDBTM
                     }
                 } else {
                     // host is not linked
+                    continue;
                 }
             }
         }
@@ -566,7 +568,12 @@ class Host extends CommonDBTM
                 ],
             );
 
-            return self::createTabEntry(self::getTypeName($nb), $nb);
+            return self::createTabEntry(
+                self::getTypeName($nb),
+                $nb,
+                $item::getType(),
+                'ti ti-heart-rate-monitor'
+            );
         }
 
         return '';
@@ -603,21 +610,23 @@ class Host extends CommonDBTM
             }
 
             // render host select
-            $pluginWebPath = Plugin::getWebDir("ivertixmonitoring");
+            $rand = mt_rand();
+            $hostDropdownId = Html::cleanId("dropdown_monitoring_host") . $rand;
             $hostDropdown = Html::jsAjaxDropdown(
                 "monitoring_host",
-                Html::cleanId("dropdown_monitoring_host"),
-                $pluginWebPath . "/ajax/hostlist.php",
+                $hostDropdownId,
+                $CFG_GLPI["root_doc"] . "/plugins/ivertixmonitoring/ajax/hostlist.php",
                 [
                     "value" => $hostItem ? $hostItem["id"] : 0,
                     "valuename" => $hostItem ? $hostItem["name"] : Dropdown::EMPTY_VALUE,
-                    'on_change' => "onHostChange(e)",
+                    'on_change' => "onHostChange$rand(this.value)",
                     'placeholder' => "Linked Monitoring Host"
                 ]
             );
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/selecthost.html.twig', [
                 'host_dropdown' => $hostDropdown,
-                'host_dropdown_id' => Html::cleanId("dropdown_monitoring_host"),
+                'host_dropdown_id' => $hostDropdownId,
+                'rand' => $rand,
                 'itemtype' => $item_type,
                 'item_id' => $item_id
             ]);
@@ -632,7 +641,7 @@ class Host extends CommonDBTM
                         'itemtype' => $item_type,
                         'host' => $hostDetail,
                         'user_name' => $user["alias"],
-                        'logo' => Plugin::getWebDir('ivertixmonitoring') . '/files/logo-ivertix.png',
+                        'logo' => $CFG_GLPI['root_doc'] . '/plugins/ivertixmonitoring/images/logo-ivertix.png',
                     ]);
                 }
             } else {

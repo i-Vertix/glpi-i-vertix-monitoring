@@ -30,8 +30,6 @@
 
 use GlpiPlugin\Ivertixmonitoring\Host;
 
-include('../../../inc/includes.php');
-
 header("Content-Type: application/json; charset=UTF-8");
 Html::header_nocache();
 
@@ -43,4 +41,4 @@ Session::checkRight('networking', UPDATE);
 
 
 $host = new Host();
-echo json_encode("Synced " . $host->linkAll() . " assets with i-Vertix Monitoring");
+echo json_encode("Synced " . $host::linkAll() . " assets with i-Vertix Monitoring");
