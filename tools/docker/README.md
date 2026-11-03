@@ -23,7 +23,7 @@ The database is installed automatically on the first start (takes about a minute
 Plugin settings (`Setup -> General -> i-Vertix Monitoring settings`):
 
 - URL: `http://mock-api:8080/centreon/api/latest/`
-- username / password: `admin` / `admin`
+- username / password: `admin` / `admin`, or API token: `mock-api-token`
 
 The mock knows the hosts `glpi-srv-01` (UP), `core-switch-01` (DOWN), `mail-srv-01` (UNREACHABLE) and `host-04` to
 `host-40`. Create assets with the same names to test the automatic link. Its state (downtimes, acknowledgements, note

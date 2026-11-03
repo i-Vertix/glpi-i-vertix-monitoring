@@ -104,6 +104,9 @@ class ApiClient
         }
         $this->auth_failed = true;
         $config = Config::getConfig();
+        if (Config::usesApiToken($config)) {
+            return $this->authenticateWithApiToken((string)(new GLPIKey())->decrypt($config['monitoring-api-token']));
+        }
         if (empty($config['monitoring-username']) || empty($config['monitoring-password'])) {
             $this->last_error = __('The monitoring API credentials are not configured', 'ivertixmonitoring');
             return false;
@@ -142,6 +145,42 @@ class ApiClient
     }
 
     /**
+     * Use an API token (i-Vertix Monitoring / Centreon 24.10+) instead of a login. The token is sent in the same
+     * `X-AUTH-TOKEN` header as a login token; the current user is read to check it and to get the contact name.
+     */
+    private function authenticateWithApiToken(string $token): bool
+    {
+        if ($token === '') {
+            // e.g. the GLPI key changed since the token was stored
+            $this->last_error = __('The stored API token cannot be decrypted, please enter it again', 'ivertixmonitoring');
+            return false;
+        }
+        $data = $this->clientRequest('configuration/users/current/parameters', [
+            'headers' => ['X-AUTH-TOKEN' => $token],
+        ]);
+        if (!$data["success"]) {
+            if ($data["status"] === 401 || $data["status"] === 403) {
+                $this->last_error = __('Authentication failed, the API token is invalid or expired', 'ivertixmonitoring');
+            }
+            return false;
+        }
+        if (!is_array($data["result"])) {
+            $this->last_error = __('The monitoring API returned an unexpected response', 'ivertixmonitoring');
+            return false;
+        }
+        $user = $data["result"];
+        $this->auth = [
+            "token" => $token,
+            "contact_id" => (int)($user['id'] ?? 0),
+            "contact_name" => (string)($user['name'] ?? $user['alias'] ?? ''),
+            "contact_alias" => (string)($user['alias'] ?? $user['name'] ?? ''),
+        ];
+        $this->auth_failed = false;
+
+        return true;
+    }
+
+    /**
      * Send a request to the monitoring API. Never throws: failures are returned with `success` = false
      * and described by getLastError().
      *
@@ -171,7 +210,7 @@ class ApiClient
             // never follow redirects: they would send the token (and the password on login) to another host
             'max_redirects' => 0,
         ]);
-        $options['headers'] = ['Accept' => 'application/json'];
+        $options['headers'] = ['Accept' => 'application/json'] + ($options['headers'] ?? []);
         if ($this->auth !== null) {
             $options['headers']['X-AUTH-TOKEN'] = $this->auth["token"];
         }

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-03 17:46+0100\n"
+"POT-Creation-Date: 2026-11-03 18:36+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -82,6 +82,24 @@ msgid "i-Vertix Monitoring API URL"
 msgstr ""
 
 #: templates/config.html.twig
+msgid "Authentication"
+msgstr ""
+
+#: templates/config.html.twig
+msgid ""
+"Use either username and password or an API token. Saving one of them removes "
+"the other."
+msgstr ""
+
+#: templates/config.html.twig
+msgid "Username and password"
+msgstr ""
+
+#: templates/config.html.twig
+msgid "active"
+msgstr ""
+
+#: templates/config.html.twig
 msgid "Monitoring username"
 msgstr ""
 
@@ -91,6 +109,22 @@ msgstr ""
 
 #: templates/config.html.twig
 msgid "Leave empty to keep the current password"
+msgstr ""
+
+#: templates/config.html.twig
+msgid "or"
+msgstr ""
+
+#: templates/config.html.twig
+msgid "API token"
+msgstr ""
+
+#: templates/config.html.twig
+msgid "Leave empty to keep the current token"
+msgstr ""
+
+#: templates/config.html.twig
+msgid "Requires i-Vertix Monitoring 24.10 or later."
 msgstr ""
 
 #: templates/config.html.twig
@@ -117,6 +151,14 @@ msgstr ""
 
 #: templates/diagnostic.html.twig
 msgid "Connection to the i-Vertix Monitoring API failed"
+msgstr ""
+
+#: templates/diagnostic.html.twig
+msgid "Authentication: API token"
+msgstr ""
+
+#: templates/diagnostic.html.twig
+msgid "Authentication: username and password"
 msgstr ""
 
 #: templates/diagnostic.html.twig
@@ -357,52 +399,73 @@ msgstr[1] ""
 msgid "i-Vertix Monitoring Host Status"
 msgstr ""
 
-#: setup.php:72 src/Host.php:93 src/Profile.php:54 src/Profile.php:94
+#: setup.php:73 src/Host.php:93 src/Profile.php:54 src/Profile.php:94
 msgid "i-Vertix Monitoring"
 msgstr ""
 
-#: setup.php:73
+#: setup.php:74
 msgid "Requests to the i-Vertix Monitoring API"
 msgstr ""
 
-#: src/ApiClient.php:108
+#: src/ApiClient.php:111
 msgid "The monitoring API credentials are not configured"
 msgstr ""
 
-#: src/ApiClient.php:124
+#: src/ApiClient.php:127
 msgid "Authentication failed, please check the username and the password"
 msgstr ""
 
-#: src/ApiClient.php:129 src/ApiClient.php:207
+#: src/ApiClient.php:132 src/ApiClient.php:168 src/ApiClient.php:246
 msgid "The monitoring API returned an unexpected response"
 msgstr ""
 
-#: src/ApiClient.php:160
+#: src/ApiClient.php:155
+msgid "The stored API token cannot be decrypted, please enter it again"
+msgstr ""
+
+#: src/ApiClient.php:163
+msgid "Authentication failed, the API token is invalid or expired"
+msgstr ""
+
+#: src/ApiClient.php:199
 msgid "The monitoring API URL is not configured"
 msgstr ""
 
-#: src/ApiClient.php:190
+#: src/ApiClient.php:229
 #, php-format
 msgid "The monitoring API answered with HTTP status %d"
 msgstr ""
 
-#: src/ApiClient.php:198
+#: src/ApiClient.php:237
 msgid ""
 "The monitoring API URL points to a private network, which GLPI blocks by "
 "default"
 msgstr ""
 
-#: src/ApiClient.php:201
+#: src/ApiClient.php:240
 #, php-format
 msgid "The monitoring API is not reachable: %s"
 msgstr ""
 
-#: src/Config.php:59
+#: src/Config.php:54
 msgid "i-Vertix Monitoring settings"
 msgstr ""
 
-#: src/Config.php:153
+#: src/Config.php:166
 msgid "The monitoring API URL must be a valid http(s) URL"
+msgstr ""
+
+#: src/Config.php:196
+msgid "Enter either an API token or username and password, not both"
+msgstr ""
+
+#: src/Config.php:204
+msgid "Enter the username together with the password"
+msgstr ""
+
+#: src/Config.php:213
+msgid ""
+"Enter the password to use username and password instead of the API token"
 msgstr ""
 
 #: src/Host.php:104

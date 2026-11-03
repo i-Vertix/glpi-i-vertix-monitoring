@@ -42,6 +42,11 @@
             <span class="status-dot"></span>
             {{ __('Connection to the i-Vertix Monitoring API failed', 'ivertixmonitoring') }}
         </span>
+    {% endif %}
+    <span class="text-muted ms-2">
+        {{ uses_api_token ? __('Authentication: API token', 'ivertixmonitoring') : __('Authentication: username and password', 'ivertixmonitoring') }}
+    </span>
+    {% if not connected %}
         {% if error is not empty %}
             <div class="text-muted mt-2">{{ error }}</div>
         {% endif %}

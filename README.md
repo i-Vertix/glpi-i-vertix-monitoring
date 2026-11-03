@@ -64,14 +64,31 @@ On the new tab `i-Vertix Monitoring settings`, you must configure following info
 
 - **i-Vertix Monitoring API Url**: the FQDN to your i-Vertix Monitoring API; the domain must be reachable from the *
   *GLPI instance**!
-- **Monitoring username**: the username to log into the i-Vertix Monitoring API
-- **Monitoring password**: the password for the provided user (leave it empty to keep the saved password)
+- **Authentication**: either
+  - **Monitoring username** and **Monitoring password** of the i-Vertix Monitoring user (leave the password empty to
+    keep the saved one), or
+  - an **API token**, see [Authentication with an API token](#authentication-with-an-api-token)
 - **Verify TLS certificate**: verify the TLS certificate of the monitoring server (default: *Yes*).
   Disable it only if your monitoring server uses a self-signed certificate.
 - **Sync asset link to monitoring**: choose, if a link to the GLPI asset should be automatically configured on the
   monitored host
 
 Click `Save` to save the provided information.
+
+### Authentication with an API token
+
+Since version 24.10, the i-Vertix Monitoring supports API tokens. Instead of username and password, you can enter a
+token in the field **API token**:
+
+1. In the i-Vertix Monitoring, create a token for the integration user (`Administration -> Authentication tokens`).
+   The user needs the [permissions](#-i-vertix-monitoring-user) listed above.
+2. Paste the token in the field **API token** and click `Save`.
+
+Only one authentication is stored: saving a token deletes username and password, saving username and password deletes
+the token. Entering both at the same time is refused.
+The token and the password are stored encrypted with the GLPI key and are never shown again: leave the field empty to
+keep the saved value. The fields are not password fields, so browsers do not suggest or save passwords for them.
+Tokens expire: when the connection fails with *the API token is invalid or expired*, create a new token.
 
 ### Monitoring server in a private network (GLPI 12)
 

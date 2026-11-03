@@ -57,7 +57,8 @@ function plugin_init_ivertixmonitoring()
 
     $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['ivertixmonitoring'] = '../../front/config.form.php?forcetab=' . urlencode(PluginConfig::class . '$1');
 
-    $PLUGIN_HOOKS[Hooks::SECURED_CONFIGS]['ivertixmonitoring'] = ['monitoring-password'];
+    // stored encrypted with the GLPI key
+    $PLUGIN_HOOKS[Hooks::SECURED_CONFIGS]['ivertixmonitoring'] = ['monitoring-password', 'monitoring-api-token'];
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['ivertixmonitoring'] = [
         Config::class => [

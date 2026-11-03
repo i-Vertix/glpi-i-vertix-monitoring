@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: i-Vertix Monitoring plugin for GLPI\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-03 17:46+0100\n"
+"POT-Creation-Date: 2026-11-03 18:36+0100\n"
 "PO-Revision-Date: 2026-11-03 16:00+0100\n"
 "Last-Translator: i-Vertix\n"
 "Language-Team: Italian\n"
@@ -79,6 +79,22 @@ msgid "i-Vertix Monitoring API URL"
 msgstr "URL dell'API di i-Vertix Monitoring"
 
 #: templates/config.html.twig
+msgid "Authentication"
+msgstr "Autenticazione"
+
+#: templates/config.html.twig
+msgid "Use either username and password or an API token. Saving one of them removes the other."
+msgstr "Usa nome utente e password oppure un token API. Salvando uno dei due, l'altro viene eliminato."
+
+#: templates/config.html.twig
+msgid "Username and password"
+msgstr "Nome utente e password"
+
+#: templates/config.html.twig
+msgid "active"
+msgstr "attivo"
+
+#: templates/config.html.twig
 msgid "Monitoring username"
 msgstr "Nome utente del monitoraggio"
 
@@ -89,6 +105,22 @@ msgstr "Password del monitoraggio"
 #: templates/config.html.twig
 msgid "Leave empty to keep the current password"
 msgstr "Lascia vuoto per mantenere la password attuale"
+
+#: templates/config.html.twig
+msgid "or"
+msgstr "oppure"
+
+#: templates/config.html.twig
+msgid "API token"
+msgstr "Token API"
+
+#: templates/config.html.twig
+msgid "Leave empty to keep the current token"
+msgstr "Lascia vuoto per mantenere il token attuale"
+
+#: templates/config.html.twig
+msgid "Requires i-Vertix Monitoring 24.10 or later."
+msgstr "Richiede i-Vertix Monitoring 24.10 o successivo."
 
 #: templates/config.html.twig
 msgid "Verify TLS certificate"
@@ -104,8 +136,12 @@ msgid "Sync asset link to monitoring"
 msgstr "Salva il link dell'asset nel monitoraggio"
 
 #: templates/diagnostic.html.twig
-msgid "The connection to the monitoring API is not encrypted (http): the password and the token are sent in clear text. Use https if possible."
-msgstr "La connessione all'API di monitoraggio non è cifrata (http): password e token vengono trasmessi in chiaro. Se possibile usa https."
+msgid ""
+"The connection to the monitoring API is not encrypted (http): the password "
+"and the token are sent in clear text. Use https if possible."
+msgstr ""
+"La connessione all'API di monitoraggio non è cifrata (http): password e "
+"token vengono trasmessi in chiaro. Se possibile usa https."
 
 #: templates/diagnostic.html.twig
 msgid "Connected to the i-Vertix Monitoring API"
@@ -114,6 +150,14 @@ msgstr "Connesso all'API di i-Vertix Monitoring"
 #: templates/diagnostic.html.twig
 msgid "Connection to the i-Vertix Monitoring API failed"
 msgstr "Connessione all'API di i-Vertix Monitoring non riuscita"
+
+#: templates/diagnostic.html.twig
+msgid "Authentication: API token"
+msgstr "Autenticazione: token API"
+
+#: templates/diagnostic.html.twig
+msgid "Authentication: username and password"
+msgstr "Autenticazione: nome utente e password"
 
 #: templates/diagnostic.html.twig
 msgid "Allow requests to the private network"
@@ -357,36 +401,44 @@ msgstr[1] "%d asset collegati a i-Vertix Monitoring"
 msgid "i-Vertix Monitoring Host Status"
 msgstr "Stato host i-Vertix Monitoring"
 
-#: setup.php:72 src/Host.php:93 src/Profile.php:54 src/Profile.php:94
+#: setup.php:73 src/Host.php:93 src/Profile.php:54 src/Profile.php:94
 msgid "i-Vertix Monitoring"
 msgstr "i-Vertix Monitoring"
 
-#: setup.php:73
+#: setup.php:74
 msgid "Requests to the i-Vertix Monitoring API"
 msgstr "Richieste all'API di i-Vertix Monitoring"
 
-#: src/ApiClient.php:108
+#: src/ApiClient.php:111
 msgid "The monitoring API credentials are not configured"
 msgstr "Le credenziali dell'API di monitoraggio non sono configurate"
 
-#: src/ApiClient.php:124
+#: src/ApiClient.php:127
 msgid "Authentication failed, please check the username and the password"
 msgstr "Autenticazione non riuscita, controlla nome utente e password"
 
-#: src/ApiClient.php:129 src/ApiClient.php:207
+#: src/ApiClient.php:132 src/ApiClient.php:168 src/ApiClient.php:246
 msgid "The monitoring API returned an unexpected response"
 msgstr "L'API di monitoraggio ha restituito una risposta inattesa"
 
-#: src/ApiClient.php:160
+#: src/ApiClient.php:155
+msgid "The stored API token cannot be decrypted, please enter it again"
+msgstr "Il token API salvato non può essere decifrato, inseriscilo di nuovo"
+
+#: src/ApiClient.php:163
+msgid "Authentication failed, the API token is invalid or expired"
+msgstr "Autenticazione non riuscita, il token API non è valido o è scaduto"
+
+#: src/ApiClient.php:199
 msgid "The monitoring API URL is not configured"
 msgstr "L'URL dell'API di monitoraggio non è configurato"
 
-#: src/ApiClient.php:190
+#: src/ApiClient.php:229
 #, php-format
 msgid "The monitoring API answered with HTTP status %d"
 msgstr "L'API di monitoraggio ha risposto con lo stato HTTP %d"
 
-#: src/ApiClient.php:198
+#: src/ApiClient.php:237
 msgid ""
 "The monitoring API URL points to a private network, which GLPI blocks by "
 "default"
@@ -394,18 +446,30 @@ msgstr ""
 "L'URL dell'API di monitoraggio punta a una rete privata, che GLPI blocca per "
 "impostazione predefinita"
 
-#: src/ApiClient.php:201
+#: src/ApiClient.php:240
 #, php-format
 msgid "The monitoring API is not reachable: %s"
 msgstr "L'API di monitoraggio non è raggiungibile: %s"
 
-#: src/Config.php:59
+#: src/Config.php:54
 msgid "i-Vertix Monitoring settings"
 msgstr "Impostazioni di i-Vertix Monitoring"
 
-#: src/Config.php:153
+#: src/Config.php:166
 msgid "The monitoring API URL must be a valid http(s) URL"
 msgstr "L'URL dell'API di monitoraggio deve essere un URL http(s) valido"
+
+#: src/Config.php:196
+msgid "Enter either an API token or username and password, not both"
+msgstr "Inserisci un token API oppure nome utente e password, non entrambi"
+
+#: src/Config.php:204
+msgid "Enter the username together with the password"
+msgstr "Inserisci il nome utente insieme alla password"
+
+#: src/Config.php:213
+msgid "Enter the password to use username and password instead of the API token"
+msgstr "Inserisci la password per usare nome utente e password al posto del token API"
 
 #: src/Host.php:104
 msgid "Read"
@@ -425,7 +489,9 @@ msgstr "Eseguire azioni"
 
 #: src/Host.php:111
 msgid "Send checks, set and cancel downtimes, acknowledge problems"
-msgstr "Inviare controlli, impostare e terminare downtime, fare l'acknowledge dei problemi"
+msgstr ""
+"Inviare controlli, impostare e terminare downtime, fare l'acknowledge dei "
+"problemi"
 
 #: src/Host.php:129
 msgid "Up"

@@ -2,11 +2,13 @@
 
 /**
  * Minimal fake of the i-Vertix Monitoring (Centreon) REST API, for the dev environment only.
- * Base URL: http://mock-api:8080/centreon/api/latest/  -  login: admin / admin
+ * Base URL: http://mock-api:8080/centreon/api/latest/  -  login: admin / admin, or API token: mock-api-token
  * State (downtimes, acknowledgements, note URLs, forced checks) is kept in /tmp/mock-api-state.json.
  */
 
 const TOKEN = 'mock-token';
+// API token (Centreon 24.10+), sent in the same X-AUTH-TOKEN header as the login token
+const API_TOKEN = 'mock-api-token';
 const STATE_FILE = '/tmp/mock-api-state.json';
 
 $hosts = [
@@ -66,7 +68,7 @@ if ($method === 'POST' && $path === 'login') {
     return true;
 }
 
-if (($_SERVER['HTTP_X_AUTH_TOKEN'] ?? null) !== TOKEN) {
+if (!in_array($_SERVER['HTTP_X_AUTH_TOKEN'] ?? null, [TOKEN, API_TOKEN], true)) {
     respond(401, ['code' => 401, 'message' => 'Invalid token']);
     return true;
 }
@@ -75,6 +77,19 @@ $now = new DateTimeImmutable();
 $m = [];
 
 switch (true) {
+    case $method === 'GET' && $path === 'configuration/users/current/parameters':
+        respond(200, [
+            'id' => 2,
+            'name' => 'GLPI integration',
+            'alias' => 'glpi-api',
+            'email' => 'glpi@example.org',
+            'timezone' => 'Europe/Rome',
+            'locale' => 'en_US',
+            'is_admin' => false,
+            'can_manage_api_tokens' => false,
+        ]);
+        break;
+
     case $method === 'GET' && $path === 'monitoring/hosts':
         $list = $hosts;
         $search = json_decode($_GET['search'] ?? 'null', true);
