@@ -30,277 +30,285 @@
 
 namespace GlpiPlugin\Ivertixmonitoring;
 
-use Exception;
-use GuzzleHttp\Client;
 use GLPIKey;
-
-use GuzzleHttp\Exception\GuzzleException;
+use Glpi\Toolbox\HttpClient;
 use Safe\Exceptions\JsonException;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+
 use function Safe\json_decode;
 use function Safe\json_encode;
 
+/**
+ * Client for the i-Vertix Monitoring REST API.
+ *
+ * Requests are sent with GLPI's HTTP client using the plugin config class as context, so the GLPI proxy settings
+ * and the private network restriction (`GLPI_SERVERSIDE_URL_ALLOWED_PRIVATE_NETWORKS_CONTEXTS`) apply.
+ */
 class ApiClient
 {
-    public ?array $auth = null;
-    public array $api_config = [];
+    /**
+     * Authentication data of this instance (token and contact).
+     */
+    private ?array $auth = null;
 
     /**
-     * @return void
+     * Set when the login failed, so the login is not retried for every request of this instance
+     * (e.g. one per row in a search list while the API is down).
      */
-    public function monitoringConfig(): void
+    private bool $auth_failed = false;
+
+    /**
+     * Translated message of the last failed request.
+     */
+    private ?string $last_error = null;
+
+    /**
+     * Whether the last request was blocked because the API URL points to a private network.
+     */
+    private bool $private_network_blocked = false;
+
+    public function getLastError(): ?string
     {
-        $api_i = new Config();
-        $this->api_config = $api_i::getConfig();
+        return $this->last_error;
+    }
+
+    public function isPrivateNetworkBlocked(): bool
+    {
+        return $this->private_network_blocked;
     }
 
     /**
-     * @return array|null
-     * @throws GuzzleException
-     * @throws JsonException
+     * @return array{id: int, name: string, alias: string}|null
      */
     public function getAuthUser(): ?array
     {
-        $connected = $this->authenticate();
-        if (!$connected) {
+        if (!$this->authenticate()) {
             return null;
         }
         return [
             "id" => $this->auth["contact_id"],
             "name" => $this->auth["contact_name"],
-            "alias" => $this->auth["contact_alias"]
+            "alias" => $this->auth["contact_alias"],
         ];
     }
 
-    /**
-     * @return bool
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function authenticate(): bool
     {
         if (isset($this->auth)) {
             return true;
         }
-        $this->monitoringConfig();
+        if ($this->auth_failed) {
+            return false;
+        }
+        $this->auth_failed = true;
+        $config = Config::getConfig();
+        if (Config::usesApiToken($config)) {
+            return $this->authenticateWithApiToken((string)(new GLPIKey())->decrypt($config['monitoring-api-token']));
+        }
+        if (empty($config['monitoring-username']) || empty($config['monitoring-password'])) {
+            $this->last_error = __('The monitoring API credentials are not configured', 'ivertixmonitoring');
+            return false;
+        }
 
-        $params = [
+        $data = $this->clientRequest('login', [
             'json' => [
                 'security' => [
                     'credentials' => [
-                        'login' => $this->api_config['monitoring-username'],
-                        'password' => (new GLPIKey())->decrypt($this->api_config['monitoring-password']),
+                        'login' => $config['monitoring-username'],
+                        'password' => (new GLPIKey())->decrypt($config['monitoring-password']),
                     ],
                 ],
             ],
-        ];
-
-        $data = $this->clientRequest('login', $params, 'POST');
-        if (!$data["success"] || !isset($data["result"]["security"]["token"])) {
+        ], 'POST');
+        if (!$data["success"]) {
+            if ($data["status"] === 401) {
+                $this->last_error = __('Authentication failed, please check the username and the password', 'ivertixmonitoring');
+            }
             return false;
         }
+        if (!is_string($data["result"]["security"]["token"] ?? null)) {
+            $this->last_error = __('The monitoring API returned an unexpected response', 'ivertixmonitoring');
+            return false;
+        }
+        $contact = $data["result"]['contact'] ?? [];
         $this->auth = [
             "token" => $data["result"]['security']['token'],
-            "contact_id" => $data["result"]['contact']['id'],
-            "contact_name" => $data["result"]['contact']['name'],
-            "contact_alias" => $data["result"]['contact']['alias'],
+            "contact_id" => (int)($contact['id'] ?? 0),
+            "contact_name" => (string)($contact['name'] ?? $config['monitoring-username']),
+            "contact_alias" => (string)($contact['alias'] ?? $contact['name'] ?? $config['monitoring-username']),
         ];
+        $this->auth_failed = false;
 
         return true;
     }
 
     /**
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
+     * Use an API token (i-Vertix Monitoring / Centreon 24.10+) instead of a login. The token is sent in the same
+     * `X-AUTH-TOKEN` header as a login token; the current user is read to check it and to get the contact name.
      */
-    public function diagnostic(): array
+    private function authenticateWithApiToken(string $token): bool
     {
-        $test = $this->authenticate();
-
-        if ($test === true) {
-            $result = [
-                'result' => true,
-                'message' => 'You are connected to the i-Vertix Monitoring API!',
-            ];
-        } else {
-            $result = [
-                'result' => false,
-                'message' => $test,
-            ];
+        if ($token === '') {
+            // e.g. the GLPI key changed since the token was stored
+            $this->last_error = __('The stored API token cannot be decrypted, please enter it again', 'ivertixmonitoring');
+            return false;
         }
+        $data = $this->clientRequest('configuration/users/current/parameters', [
+            'headers' => ['X-AUTH-TOKEN' => $token],
+        ]);
+        if (!$data["success"]) {
+            if ($data["status"] === 401 || $data["status"] === 403) {
+                $this->last_error = __('Authentication failed, the API token is invalid or expired', 'ivertixmonitoring');
+            }
+            return false;
+        }
+        if (!is_array($data["result"])) {
+            $this->last_error = __('The monitoring API returned an unexpected response', 'ivertixmonitoring');
+            return false;
+        }
+        $user = $data["result"];
+        $this->auth = [
+            "token" => $token,
+            "contact_id" => (int)($user['id'] ?? 0),
+            "contact_name" => (string)($user['name'] ?? $user['alias'] ?? ''),
+            "contact_alias" => (string)($user['alias'] ?? $user['name'] ?? ''),
+        ];
+        $this->auth_failed = false;
 
-        return $result;
+        return true;
     }
 
     /**
-     * @param string $endpoint
-     * @param array $params
-     * @param string $method
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
+     * Send a request to the monitoring API. Never throws: failures are returned with `success` = false
+     * and described by getLastError().
+     *
+     * @param string $endpoint endpoint relative to the configured API URL
+     * @param array $options options of the Symfony HTTP client (`query`, `json`, ...)
+     * @param string $method HTTP method
+     * @return array{success: bool, status: int|null, result: mixed}
      */
-    public function clientRequest(string $endpoint = '', array $params = [], string $method = 'GET'): array
+    public function clientRequest(string $endpoint = '', array $options = [], string $method = 'GET'): array
     {
-        $this->monitoringConfig();
-        if (empty($this->api_config["monitoring-url"])) {
-            return ["success" => false, "result" => "not authenticated"];
-        }
-        $api_client = new Client([
-            'base_uri' => $this->api_config['monitoring-url'],
-            'verify' => false,
-            'connect_timeout' => 3,
-            'timeout' => 10,
-        ]);
-        $params['headers'] = ['Content-Type' => 'application/json'];
+        $this->last_error = null;
+        $this->private_network_blocked = false;
 
+        $config = Config::getConfig();
+        if (empty($config["monitoring-url"])) {
+            $this->last_error = __('The monitoring API URL is not configured', 'ivertixmonitoring');
+            return ["success" => false, "status" => null, "result" => null];
+        }
+        $verify_tls = ($config['monitoring-verify-tls'] ?? '1') === '1';
+
+        $client = new HttpClient(Config::class, [
+            'base_uri' => $config['monitoring-url'],
+            'verify_peer' => $verify_tls,
+            'verify_host' => $verify_tls,
+            'timeout' => 10,
+            'max_duration' => 30,
+            // never follow redirects: they would send the token (and the password on login) to another host
+            'max_redirects' => 0,
+        ]);
+        $options['headers'] = ['Accept' => 'application/json'] + ($options['headers'] ?? []);
         if ($this->auth !== null) {
-            $params['headers'] = ['Content-Type' => 'application/json', 'X-AUTH-TOKEN' => $this->auth["token"]];
+            $options['headers']['X-AUTH-TOKEN'] = $this->auth["token"];
         }
 
         try {
-            $result = $api_client->request($method, $endpoint, $params);
-        } catch (Exception $e) {
-            return ["success" => false, "result" => $e->getMessage()];
+            $response = $client->request($method, $endpoint, $options);
+            $body = $response->getContent();
+            return [
+                "success" => true,
+                "status" => $response->getStatusCode(),
+                "result" => $body !== "" ? json_decode($body, true) : null,
+            ];
+        } catch (HttpExceptionInterface $e) {
+            $status = $e->getResponse()->getStatusCode();
+            $this->last_error = sprintf(
+                __('The monitoring API answered with HTTP status %d', 'ivertixmonitoring'),
+                $status
+            );
+            return ["success" => false, "status" => $status, "result" => $e->getMessage()];
+        } catch (TransportExceptionInterface $e) {
+            // thrown by Symfony's NoPrivateNetworkHttpClient
+            if (str_contains($e->getMessage(), ' is blocked for ')) {
+                $this->private_network_blocked = true;
+                $this->last_error = __('The monitoring API URL points to a private network, which GLPI blocks by default', 'ivertixmonitoring');
+            } else {
+                $this->last_error = sprintf(
+                    __('The monitoring API is not reachable: %s', 'ivertixmonitoring'),
+                    $e->getMessage()
+                );
+            }
+            return ["success" => false, "status" => null, "result" => $e->getMessage()];
+        } catch (ExceptionInterface | JsonException $e) {
+            $this->last_error = __('The monitoring API returned an unexpected response', 'ivertixmonitoring');
+            return ["success" => false, "status" => null, "result" => $e->getMessage()];
         }
-        $code = $result->getStatusCode();
-        $body = (string)$result->getBody();
-        if ($body !== "") {
-            $body = json_decode($body, true);
-        }
-        return ["success" => $code >= 200 && $code < 300, "result" => $body];
     }
 
-    /**
-     * @param array|null $query
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
-    public function getHosts(array $query = null): array
+    public function getHosts(?array $query = null): array
     {
-        $params = [];
+        $options = [];
         if (isset($query)) {
-            $params["query"] = $query;
+            $options["query"] = $query;
         }
-        return $this->clientRequest('monitoring/hosts', $params);
+        return $this->clientRequest('monitoring/hosts', $options);
     }
 
-    /**
-     * @param int $hostId
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function getHostById(int $hostId): array
     {
         return $this->clientRequest('monitoring/hosts/' . $hostId);
     }
 
-    /**
-     * @param int $hostId
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function getHostResourceDetailById(int $hostId): array
     {
         return $this->clientRequest('monitoring/resources/hosts/' . $hostId);
     }
 
-    /**
-     * @param int $hostId
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function getHostTimelineById(int $hostId): array
     {
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/timeline');
     }
 
-    /**
-     * @param array $params
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
-    public function getServicesList(array $params = []): array
+    public function getServicesList(array $options = []): array
     {
-        return $this->clientRequest('monitoring/services', $params);
+        return $this->clientRequest('monitoring/services', $options);
     }
 
-    /**
-     * @param int $hostId
-     * @param int $limit
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function getServicesByHostId(int $hostId, int $limit = 30): array
     {
-        $params['query'] = ['limit' => $limit];
-        return $this->clientRequest('monitoring/hosts/' . $hostId . '/services', $params);
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/services', [
+            'query' => ['limit' => $limit],
+        ]);
     }
 
-    /**
-     * @param int $hostId
-     * @param bool $isForced
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function sendHostCheck(int $hostId, bool $isForced = true): array
     {
-        $params['json']['is_forced'] = $isForced;
-        return $this->clientRequest('monitoring/hosts/' . $hostId . '/check', $params, 'POST');
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/check', [
+            'json' => ['is_forced' => $isForced],
+        ], 'POST');
     }
 
-    /**
-     * @param int $hostId
-     * @param array $downtime
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function setHostDowntime(int $hostId, array $downtime): array
     {
-        $params["json"] = $downtime;
-        return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes', $params, 'POST');
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes', ['json' => $downtime], 'POST');
     }
 
-    /**
-     * @param int $hostId
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function getHostDowntimes(int $hostId): array
     {
         return $this->clientRequest('monitoring/hosts/' . $hostId . '/downtimes');
     }
 
-    /**
-     * @param int $downtimeId
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function getDowntimeById(int $downtimeId): array
     {
         return $this->clientRequest('monitoring/downtimes/' . $downtimeId);
     }
 
-    /**
-     * @param int $hostId
-     * @param int $limit
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function getServiceDowntimesByHostId(int $hostId, int $limit = 30): array
     {
-        $params = [
+        return $this->clientRequest('monitoring/services/downtimes', [
             'query' => [
                 'search' => json_encode([
                     'host.id' => [
@@ -310,45 +318,24 @@ class ApiClient
                 'limit' => $limit,
                 'page' => 1,
             ],
-        ];
-
-        return $this->clientRequest('monitoring/services/downtimes', $params);
+        ]);
     }
 
-    /**
-     * @param int $downtimeId
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function cancelDowntimeById(int $downtimeId): array
     {
         return $this->clientRequest('monitoring/downtimes/' . $downtimeId, [], 'DELETE');
     }
 
-    /**
-     * @param int $hostId
-     * @param array $acknowledge
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
-     */
     public function acknowledgeHostById(int $hostId, array $acknowledge): array
     {
-        $params["json"] = $acknowledge;
-        return $this->clientRequest('monitoring/hosts/' . $hostId . '/acknowledgements', $params, 'POST');
+        return $this->clientRequest('monitoring/hosts/' . $hostId . '/acknowledgements', ['json' => $acknowledge], 'POST');
     }
 
     /**
-     * @param int $hostId
-     * @param array $hostFields
-     * @return array
-     * @throws GuzzleException
-     * @throws JsonException
+     * Update fields of a host in the monitoring configuration (e.g. `note_url`).
      */
     public function updateHost(int $hostId, array $hostFields): array
     {
-        $params["json"] = $hostFields;
-        return $this->clientRequest('configuration/hosts/' . $hostId, $hostFields, 'PATCH');
+        return $this->clientRequest('configuration/hosts/' . $hostId, ['json' => $hostFields], 'PATCH');
     }
 }

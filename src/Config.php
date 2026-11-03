@@ -32,42 +32,65 @@ namespace GlpiPlugin\Ivertixmonitoring;
 
 use CommonDBTM;
 use CommonGLPI;
+use Config as Glpi_Config;
 use Glpi\Application\View\TemplateRenderer;
 use Session;
-use Config as Glpi_Config;
 
 class Config extends Glpi_Config
 {
+    public const CONTEXT = 'plugin:ivertixmonitoring';
+
+    /**
+     * Config values set on install/upgrade when missing.
+     * URL and credentials have no default: they must be entered by an admin.
+     */
+    public const DEFAULTS = [
+        'monitoring-sync' => '0',
+        'monitoring-verify-tls' => '1',
+    ];
+
     public static function getTypeName($nb = 0)
     {
         return __('i-Vertix Monitoring settings', 'ivertixmonitoring');
     }
 
-    public static function getConfig()
+    public static function getConfig(): array
     {
-        return Glpi_Config::getConfigurationValues('plugin:ivertixmonitoring');
+        return Glpi_Config::getConfigurationValues(self::CONTEXT) + self::DEFAULTS;
+    }
+
+    /**
+     * Whether an API token is configured (then username and password are empty, see prepareAuthenticationUpdate()).
+     */
+    public static function usesApiToken(array $config): bool
+    {
+        return !empty($config['monitoring-api-token']);
+    }
+
+    /**
+     * Whether everything needed to connect is configured: the URL and either an API token or username and password.
+     */
+    public static function isComplete(array $config): bool
+    {
+        return !empty($config['monitoring-url'])
+            && (self::usesApiToken($config) || (!empty($config['monitoring-username']) && !empty($config['monitoring-password'])));
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
-        switch ($item->getType()) {
-            case Glpi_Config::class:
-                return self::createTabEntry(
-                    self::getTypeName(),
-                    0,
-                    $item::getType(),
-                    'ti ti-heart-rate-monitor'
-                );
+        if ($item instanceof Glpi_Config) {
+            return self::createTabEntry(
+                self::getTypeName(),
+                0,
+                $item::getType(),
+                'ti ti-heart-rate-monitor'
+            );
         }
 
         return '';
     }
 
-    public static function displayTabContentForItem(
-        CommonGLPI $item,
-                   $tabnum = 1,
-                   $withtemplate = 0
-    )
+    public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
     {
         if ($item instanceof Glpi_Config) {
             return self::showForConfig($item, $withtemplate);
@@ -76,11 +99,8 @@ class Config extends Glpi_Config
         return true;
     }
 
-    public static function showForConfig(Glpi_Config $config, $withtemplate = 0)
+    public static function showForConfig(Glpi_Config $config, $withtemplate = 0): bool
     {
-        /** @var array $CFG_GLPI */
-        global $CFG_GLPI;
-
         if (!self::canUpdate()) {
             return false;
         }
@@ -94,56 +114,113 @@ class Config extends Glpi_Config
             'can_edit' => $canedit,
         ]);
 
-        $conf_ok = true;
-        $all_nok = true;
-
-        foreach ($current_config as $v) {
-            if ($v === '') {
-                $conf_ok = false;
-            } else {
-                $all_nok = false;
-            }
+        $configured = array_filter(
+            ['monitoring-url', 'monitoring-username', 'monitoring-password', 'monitoring-api-token'],
+            static fn($key) => !empty($current_config[$key])
+        );
+        if ($configured === []) {
+            // nothing configured yet
+            return true;
         }
-        if (empty($current_config)) $conf_ok = false;
-        if ($conf_ok === true) {
-            $api = new ApiClient();
-            $connected = $api->authenticate();
-
-            TemplateRenderer::getInstance()->display('@ivertixmonitoring/diagnostic.html.twig', [
-                'connected' => $connected,
-            ]);
-
-            if ($connected === true && $canedit) {
-                TemplateRenderer::getInstance()->display('@ivertixmonitoring/syncAll.html.twig', [
-                    'current_config' => $current_config,
-                ]);
-            }
-        } else if (!$all_nok) {
+        if (!self::isComplete($current_config)) {
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/checkField.html.twig');
+            return true;
+        }
+
+        $api = new ApiClient();
+        $connected = $api->authenticate();
+
+        TemplateRenderer::getInstance()->display('@ivertixmonitoring/diagnostic.html.twig', [
+            'connected' => $connected,
+            'error' => $api->getLastError(),
+            'private_network_blocked' => $api->isPrivateNetworkBlocked(),
+            'unencrypted' => str_starts_with(strtolower($current_config['monitoring-url']), 'http://'),
+            'context_class' => self::class,
+            'uses_api_token' => self::usesApiToken($current_config),
+        ]);
+
+        if ($connected && $canedit) {
+            TemplateRenderer::getInstance()->display('@ivertixmonitoring/syncAll.html.twig', [
+                'current_config' => $current_config,
+            ]);
         }
         return true;
     }
 
+    /**
+     * Normalize the plugin settings before they are saved (hooked on `Config` PRE_ITEM_UPDATE).
+     */
     public static function prepareConfigUpdate(CommonDBTM $item): void
     {
-        if (
-            isset($item->input['monitoring-password'])
-            && ($item->input['monitoring-password'] === '')
-        ) {
-            unset($item->input['monitoring-password']);
+        if (!is_array($item->input) || ($item->input['config_context'] ?? null) !== self::CONTEXT) {
+            return;
         }
-        if (!empty($item->input['monitoring-url'])) {
-            $item->input['monitoring-url'] = trim($item->input['monitoring-url']);
-            if (!str_ends_with($item->input['monitoring-url'], '/')) {
-                $item->input['monitoring-url'] .= '/';
+        self::prepareAuthenticationUpdate($item);
+        if (isset($item->input['monitoring-url'])) {
+            $url = trim((string)$item->input['monitoring-url']);
+            $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+            if ($url !== '' && (!in_array($scheme, ['http', 'https'], true) || parse_url($url, PHP_URL_HOST) === null)) {
+                // keep the stored URL
+                unset($item->input['monitoring-url']);
+                Session::addMessageAfterRedirect(
+                    htmlescape(__('The monitoring API URL must be a valid http(s) URL', 'ivertixmonitoring')),
+                    false,
+                    ERROR
+                );
+                return;
             }
-//            if (!str_ends_with($item->input['monitoring-url'], 'api/latest/')) {
-//                if (!str_ends_with($item->input['monitoring-url'], 'api/')) {
-//                    $item->input['monitoring-url'] .= 'api/latest/';
-//                } else {
-//                    $item->input['monitoring-url'] .= 'latest/';
-//                }
-//            }
+            if ($url !== '' && !str_ends_with($url, '/')) {
+                $url .= '/';
+            }
+            $item->input['monitoring-url'] = $url;
         }
+    }
+
+    /**
+     * Store either an API token or username and password, never both.
+     *
+     * Empty secret fields keep the stored value. A new token removes username and password, a new password removes
+     * the token. Entering both is refused and keeps the stored authentication.
+     */
+    private static function prepareAuthenticationUpdate(CommonDBTM $item): void
+    {
+        $token = trim((string)($item->input['monitoring-api-token'] ?? ''));
+        $password = (string)($item->input['monitoring-password'] ?? '');
+        $username = trim((string)($item->input['monitoring-username'] ?? ''));
+        // empty secret fields keep the stored values
+        unset($item->input['monitoring-api-token'], $item->input['monitoring-password']);
+
+        $stored = self::getConfig();
+        $error = null;
+        if ($token !== '' && $password !== '') {
+            $error = __('Enter either an API token or username and password, not both', 'ivertixmonitoring');
+        } elseif ($token !== '') {
+            $item->input['monitoring-api-token'] = $token;
+            $item->input['monitoring-username'] = '';
+            $item->input['monitoring-password'] = '';
+            return;
+        } elseif ($password !== '') {
+            if ($username === '') {
+                $error = __('Enter the username together with the password', 'ivertixmonitoring');
+            } else {
+                $item->input['monitoring-username'] = $username;
+                $item->input['monitoring-password'] = $password;
+                $item->input['monitoring-api-token'] = '';
+                return;
+            }
+        } elseif ($username !== '' && self::usesApiToken($stored)) {
+            // switching from the token to username and password needs the password
+            $error = __('Enter the password to use username and password instead of the API token', 'ivertixmonitoring');
+        } else {
+            // nothing new: only the username may change (credentials mode)
+            if (array_key_exists('monitoring-username', $item->input)) {
+                $item->input['monitoring-username'] = $username;
+            }
+            return;
+        }
+
+        // keep the stored authentication
+        unset($item->input['monitoring-username']);
+        Session::addMessageAfterRedirect(htmlescape($error), false, ERROR);
     }
 }

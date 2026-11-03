@@ -38,8 +38,8 @@
                 </div>
                 <div class="modal-body">
                     <div class="row" id="downtime-time">
-                        {{ fields.datetimeField('start_time', '', 'From') }}
-                        {{ fields.datetimeField('end_time', '', 'To') }}
+                        {{ fields.datetimeField('start_time', '', __('From', 'ivertixmonitoring')) }}
+                        {{ fields.datetimeField('end_time', '', __('To', 'ivertixmonitoring')) }}
                     </div>
                     <div class="row align-items-center" style="min-height: 36px">
                         <div class="row col-auto">
@@ -87,7 +87,7 @@
                     <div class="w-100">
                         <div class="d-flex justify-content-between">
                             <a href="#" class="btn" data-bs-dismiss="modal">
-                                {{ __('Cancel') }}
+                                {{ __('Cancel', 'ivertixmonitoring') }}
                             </a>
                             <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="submit-downtime">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
@@ -117,7 +117,7 @@
         $("#downtime-with-services").prop("checked", true);
         $("#downtime-duration-value").val('');
         $("#downtime-duration-unit").val('s');
-        $("#downtime-comment").val("{{ __('Downtime set by', 'ivertixmonitoring') }}{{ user_name }}");
+        $("#downtime-comment").val("{{ __('Downtime set by %s', 'ivertixmonitoring')|format(user_name)|e('js') }}");
     }
 
     $('#downtime-is-fixed').click(function () {
@@ -142,13 +142,13 @@
         });
         $.ajax({
             "type": 'POST',
-            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/setDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/setDowntime.php?itemtype={{ itemtype|url_encode }}&item_id={{ item_id }}",
             "data": data,
             "success": function (result) {
-                glpi_toast_info("{{ __('It may take some time for the downtime to appear', 'ivertixmonitoring') }}", "{{ __('Downtime set', 'ivertixmonitoring') }}");
+                glpi_toast_info("{{ __('It may take some time for the downtime to appear', 'ivertixmonitoring')|e('js') }}", "{{ __('Downtime set', 'ivertixmonitoring')|e('js') }}");
             },
             "error": function (result) {
-                glpi_toast_error("{{ __('Failed to set the downtime', 'ivertixmonitoring') }}");
+                glpi_toast_error("{{ __('Failed to set the downtime', 'ivertixmonitoring')|e('js') }}");
             }
         });
     });

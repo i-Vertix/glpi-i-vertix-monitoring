@@ -4,10 +4,16 @@
 
 This plugin is used to integrate realtime monitoring information from the i-Vertix Monitoring into GLPI.
 
-Currently, the plugin supports GLPI version 10+ and following asset types:
+The plugin supports following asset types:
 
 - Computers
 - Network devices
+
+| Plugin version | GLPI version | PHP version |
+|----------------|--------------|-------------|
+| 12.0.x         | 12.0.x       | 8.3+        |
+| 11.0.x         | 11.0.x       | 8.2+        |
+| 10.0.x         | 10.0.x       | 7.4+        |
 
 ## 🔧 Installation
 
@@ -58,12 +64,53 @@ On the new tab `i-Vertix Monitoring settings`, you must configure following info
 
 - **i-Vertix Monitoring API Url**: the FQDN to your i-Vertix Monitoring API; the domain must be reachable from the *
   *GLPI instance**!
-- **Monitoring username**: the username to log into the i-Vertix Monitoring API
-- **Monitoring password**: the password for the provided user
+- **Authentication**: either
+  - **Monitoring username** and **Monitoring password** of the i-Vertix Monitoring user (leave the password empty to
+    keep the saved one), or
+  - an **API token**, see [Authentication with an API token](#authentication-with-an-api-token)
+- **Verify TLS certificate**: verify the TLS certificate of the monitoring server (default: *Yes*).
+  Disable it only if your monitoring server uses a self-signed certificate.
 - **Sync asset link to monitoring**: choose, if a link to the GLPI asset should be automatically configured on the
   monitored host
 
 Click `Save` to save the provided information.
+
+### Authentication with an API token
+
+Since version 24.10, the i-Vertix Monitoring supports API tokens. Instead of username and password, you can enter a
+token in the field **API token**:
+
+1. In the i-Vertix Monitoring, create a token for the integration user (`Administration -> Authentication tokens`).
+   The user needs the [permissions](#-i-vertix-monitoring-user) listed above.
+2. Paste the token in the field **API token** and click `Save`.
+
+Only one authentication is stored: saving a token deletes username and password, saving username and password deletes
+the token. Entering both at the same time is refused.
+The token and the password are stored encrypted with the GLPI key and are never shown again: leave the field empty to
+keep the saved value. The fields are not password fields, so browsers do not suggest or save passwords for them.
+Tokens expire: when the connection fails with *the API token is invalid or expired*, create a new token.
+
+### Monitoring server in a private network (GLPI 12)
+
+Since GLPI 12, GLPI blocks server-side requests to private networks (e.g. `10.0.0.0/8`, `172.16.0.0/12`,
+`192.168.0.0/16`) by default. As the i-Vertix Monitoring usually runs in your internal network, you have to allow the
+plugin to reach it. Add the following lines to the file `config/local_define.php` of your GLPI installation (create the
+file if it does not exist):
+
+```php
+<?php
+define('GLPI_SERVERSIDE_URL_ALLOWED_PRIVATE_NETWORKS_CONTEXTS', [
+    \Agent::class,
+    \Auth::class,
+    \GlpiPlugin\Ivertixmonitoring\Config::class,
+]);
+```
+
+If you already define this constant, just add `\GlpiPlugin\Ivertixmonitoring\Config::class` to the list.
+The settings page shows this hint when the connection fails because of this restriction.
+
+The requests to the monitoring API use the proxy configured in `Setup -> General -> System`. To bypass the proxy for the
+monitoring API, add *i-Vertix Monitoring* to the proxy exclusions on the same page.
 
 ![configure plugin](readme/setup.png)
 
@@ -74,17 +121,20 @@ configuration page.
 
 ![verify api connection](readme/verify_api_connection.png)
 
-#### 🔴 i-Vertix API Connection PROBLEM
+#### 🔴 Connection to the i-Vertix Monitoring API failed
 
 This error indicates that the GLPI system was unable to successfully connect to the Monitoring API, using the provided
-url and credentials. What you can do:
+url and credentials. The reason is shown below the status. What you can do:
 
+- Allow requests to the [private network](#monitoring-server-in-a-private-network-glpi-12)
 - Verify that the GLPI system can reach the Monitoring system (e.g. by ping the monitoring instance or by nslookup)
+- On a TLS certificate error, install the CA of the monitoring server on the GLPI server or disable
+  *Verify TLS certificate*
 - Verify the provided user credentials (e.g. try to log into the monitoring system directly with the provided
   credentials)
 - Verify the [required user permissions](#-i-vertix-monitoring-user)
 
-#### 🟢 i-Vertix API Connection OK
+#### 🟢 Connected to the i-Vertix Monitoring API
 
 Connection OK indicates, that the connection to the i-Vertix Monitoring API was successfully established.
 You are now ready to use the i-Vertix Monitoring GLPI integration.
@@ -94,6 +144,27 @@ the `Sync all assets to monitoring` or `Automatically link assets to monitoring 
 your *Sync asset link to monitoring* setting.
 Both actions try to match the names of assets and monitored hosts and creates a link on matching names (exact match).
 In addition, *Sync all assets to monitoring* adds the asset weblink on the matched host.
+Assets that are already linked, deleted assets and templates are skipped.
+
+## 🔐 Rights
+
+The plugin adds the right *i-Vertix Monitoring* to the profiles (`Administration -> Profiles -> i-Vertix Monitoring`):
+
+| Right          | Allows                                                                       |
+|----------------|------------------------------------------------------------------------------|
+| Read           | view the `i-Vertix Monitoring` tab and the *Host Status* search column       |
+| Link hosts     | link and unlink assets and monitoring hosts, *Sync all assets to monitoring* |
+| Run actions    | send checks, set and cancel downtimes, acknowledge problems                  |
+
+The rights are always combined with the rights on the asset (entity included): *Read* and *Run actions* need read
+access to the asset, *Link hosts* needs update access. A monitoring host that is already linked to an asset can only be
+linked to another asset by users who can update that asset too. *Sync all assets to monitoring* additionally needs the
+right to update the GLPI configuration.
+
+All actions are executed in the i-Vertix Monitoring with the user configured in the plugin settings.
+
+On installation (and on the update from 11.0.x), profiles that can update computers or network devices get all rights,
+profiles that can only read them get *Read*.
 
 ## 👀 View host information on assets
 
@@ -146,31 +217,35 @@ Remember to enable the list-column *Notes* in the list configuration (see image 
 
 ## Translation
 
-To translate strings used in the plugin, we use GLPI's `extract-locales` script which is part of the `glpi-project/tools`
-package to extract the strings from `.php` and `.html.twig` files.
+The plugin is translated to English (`en_GB`), German (`de_DE`) and Italian (`it_IT`).
 
-The script requires:
+### Rules for strings
 
-- PHP (8.2+)
-- xgettext
-- msginit
-- node & npm (when using vue)
+- Every string uses the plugin domain: `__('Text', 'ivertixmonitoring')` in PHP and Twig, also for strings that exist
+  in GLPI itself. Strings without domain are not extracted.
+- Use placeholders instead of concatenation, so translators can change the word order:
+  `sprintf(__('From: %s', 'ivertixmonitoring'), $date)` in PHP,
+  `{{ __('From: %s', 'ivertixmonitoring')|format(date) }}` in Twig.
+  Use numbered placeholders (`%1$s`, `%2$s`) when there are several.
+- Use `_n()` for strings with a number: `_n('%d asset linked', '%d assets linked', $count, 'ivertixmonitoring')`.
+- Escape translations used inside JavaScript strings: `"{{ __('Text', 'ivertixmonitoring')|e('js') }}"`.
+- Host and service states returned by the API (`UP`, `DOWN`, `OK`, ...) are translated by `Host::getStatusLabels()`.
 
-Normally the script should be executed in a linux environment.
-To execute it in a *Windows* environment, you have two possibilities:
+### Update the translation files
 
-1. Use **Git Bash**
-
-    By default, *Git Bash* comes along with xgettext but is missing msginit. To install msginit into *Git Bash*, 
-    download the gettext binaries from
-    [https://mlocati.github.io/articles/gettext-iconv-windows.html](https://mlocati.github.io/articles/gettext-iconv-windows.html)
-    and copy `<unzipped gettext binaries>\bin\msginit.exe` to `C:\Program Files\Git\usr\bin`.
-    Then, launch *Git Bash* and execute the script located in: `<project root>/vendor/bin/extract-locales`
+1. Extract the strings from the `.php` and `.html.twig` files with GLPI's `extract-locales` script (part of the
+   `glpi-project/tools` dev dependency, installed by `composer install`):
 
     ```bash
     ./vendor/bin/extract-locales
     ```
 
-2. Use **cygwin**
+   It writes `locales/ivertixmonitoring.pot` and regenerates `locales/en_GB.po`.
+   It needs PHP, `xgettext` and `msginit` in the `PATH`. On Windows, run it in *Git Bash* with the
+   [gettext binaries](https://mlocati.github.io/articles/gettext-iconv-windows.html) in the `PATH`
+   (e.g. `export PATH="/c/Dev/utils/gettext/bin:$PATH"`).
 
-The script will output `ivertixmonitoring.pot` located in `locales/` which can be used to update the translations.
+2. Open `locales/de_DE.po` and `locales/it_IT.po` in Poedit, update them from the `.pot` file
+   (*Translation -> Update from POT File*), translate the new strings and save. Poedit compiles the `.mo` file on save.
+
+3. Commit the `.pot`, `.po` and `.mo` files (GLPI loads the `.mo` files at runtime).

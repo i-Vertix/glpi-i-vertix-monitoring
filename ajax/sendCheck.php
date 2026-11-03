@@ -28,9 +28,6 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Exception\Http\AccessDeniedHttpException;
-use Glpi\Exception\Http\BadRequestHttpException;
-use Glpi\Exception\Http\NotFoundHttpException;
 use Glpi\Exception\Http\HttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
@@ -38,35 +35,11 @@ header('Content-Type: text/html; charset=UTF-8');
 Html::header_nocache();
 
 Session::checkLoginUser();
+Host::checkPostRequest();
 
-$itemId = $_GET["item_id"] ?? null;
-$itemType = $_GET["itemtype"] ?? null;
+$host = Host::getRequestedLink(READ, Host::RIGHT_ACTION);
 
-if (!isset($itemType)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
+if (!$host->sendHostCheck()) {
+    throw new HttpException(500, "Request failed");
 }
-
-if (!isset($itemId) || !is_numeric($itemId)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
-}
-
-$itemId = (int)Toolbox::cleanInteger($itemId);
-
-$item = getItemForItemtype($itemType);
-if ($item === false) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
-}
-
-if (!$item->can($itemId, UPDATE)) {
-    throw new AccessDeniedHttpException("You don't have permission to perform this action.");
-}
-
-$host = new Host();
-if ($host->isItemLinked($itemId, $itemType)) {
-    if (!$host->sendHostCheck()) {
-        throw new HttpException(500, "Request failed");
-    }
-    die("Request completed");
-}
-
-throw new NotFoundHttpException("No linked monitoring host found for item");
+echo "Request completed";

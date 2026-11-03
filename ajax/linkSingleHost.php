@@ -33,47 +33,37 @@ use Glpi\Exception\Http\BadRequestHttpException;
 use Glpi\Exception\Http\HttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
+use function Safe\json_encode;
+
 header("Content-Type: application/json; charset=UTF-8");
 Html::header_nocache();
 
 Session::checkLoginUser();
+Host::checkPostRequest();
+
+[$itemType, $itemId] = Host::getRequestedItem(UPDATE, UPDATE);
 
 $host = new Host();
-$itemId = $_GET["item_id"] ?? null;
-$itemType = $_GET["itemtype"] ?? null;
+
+// an empty host id removes the link
 $hostId = $_POST["host_id"] ?? null;
-
-if (!isset($itemType)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
-}
-
-if (!isset($itemId) || !is_numeric($itemId)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
-}
-
-$itemId = (int)Toolbox::cleanInteger($itemId);
-
 if ($hostId === "") {
     $hostId = null;
-} else if (is_numeric($hostId)) {
-    $hostId = (int)Toolbox::cleanInteger($hostId);
+} elseif (is_string($hostId) && ctype_digit($hostId)) {
+    $hostId = (int)$hostId;
+    if ($host->getMonitoringHost($hostId) === null) {
+        throw new BadRequestHttpException("Unknown monitoring host");
+    }
+    if (!$host->canLinkMonitoringHost($hostId)) {
+        // the host is linked to an asset the user cannot update
+        throw new AccessDeniedHttpException();
+    }
 } else {
     throw new BadRequestHttpException("Missing or invalid parameter: 'host_id'");
 }
 
-$item = getItemForItemtype($itemType);
-if ($item === false) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
+if (!$host->linkItemToMonitoringHostByHostId($itemId, $itemType, $hostId)) {
+    throw new HttpException(500, "Linking host failed");
 }
 
-if (!$item->can($itemId, UPDATE)) {
-    throw new AccessDeniedHttpException("You don't have permission to perform this action.");
-}
-
-$success = $host->linkItemToMonitoringHostByHostId($itemId, $itemType, $hostId);
-
-if (!$success) {
-    throw new HttpException(500, "linking host failed");
-}
-
-echo json_encode($hostId !== null ? $host->fields : "link to host removed");
+echo json_encode($hostId !== null ? $host->fields : "Link to host removed");

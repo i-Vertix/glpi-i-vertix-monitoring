@@ -34,19 +34,75 @@
     {% if can_edit %}
         <input type="hidden" name="config_context" value="plugin:ivertixmonitoring">
         <div class="mb-3">
-            <label class="form-label" for="monitoring-url">{{ __("i-Vertix Monitoring API URL") }}</label>
+            <label class="form-label" for="monitoring-url">{{ __('i-Vertix Monitoring API URL', 'ivertixmonitoring') }}</label>
             <input type="text" class="form-control" name="monitoring-url" id="monitoring-url"
-                   placeholder="https://<fqdn>/centreon/api/latest/" value="{{ current_config['monitoring-url'] ?? "" }}">
+                   placeholder="https://<fqdn>/centreon/api/latest/" value="{{ current_config['monitoring-url'] ?? '' }}">
+        </div>
+        {#
+            Secrets are masked text inputs instead of type="password": browsers then neither suggest generated
+            passwords nor offer to save them. The data-* attributes tell password manager extensions to ignore them.
+        #}
+        {% set secret_attrs = 'autocomplete="off" spellcheck="false" autocapitalize="off" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"' %}
+        {% set uses_token = current_config['monitoring-api-token'] is not empty %}
+        {% set uses_credentials = not uses_token and current_config['monitoring-password'] is not empty %}
+
+        <div class="mb-3">
+            <div class="form-label">{{ __('Authentication', 'ivertixmonitoring') }}</div>
+            <div class="form-hint mb-2">
+                {{ __('Use either username and password or an API token. Saving one of them removes the other.', 'ivertixmonitoring') }}
+            </div>
+
+            <div class="card card-sm mb-0">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <h4 class="m-0">{{ __('Username and password', 'ivertixmonitoring') }}</h4>
+                        {% if uses_credentials %}
+                            <span class="badge bg-green-lt ms-2">{{ __('active', 'ivertixmonitoring') }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="monitoring-username">{{ __('Monitoring username', 'ivertixmonitoring') }}</label>
+                        <input type="text" class="form-control" name="monitoring-username" id="monitoring-username"
+                               {{ secret_attrs|raw }} value="{{ current_config['monitoring-username'] ?? '' }}">
+                    </div>
+                    <div>
+                        <label class="form-label" for="monitoring-password">{{ __('Monitoring password', 'ivertixmonitoring') }}</label>
+                        <input type="text" class="form-control" style="-webkit-text-security: disc" name="monitoring-password" id="monitoring-password"
+                               {{ secret_attrs|raw }}
+                               placeholder="{{ uses_credentials ? __('Leave empty to keep the current password', 'ivertixmonitoring') : '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="hr-text my-2">{{ __('or', 'ivertixmonitoring') }}</div>
+
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <h4 class="m-0">{{ __('API token', 'ivertixmonitoring') }}</h4>
+                        {% if uses_token %}
+                            <span class="badge bg-green-lt ms-2">{{ __('active', 'ivertixmonitoring') }}</span>
+                        {% endif %}
+                    </div>
+                    <label class="visually-hidden" for="monitoring-api-token">{{ __('API token', 'ivertixmonitoring') }}</label>
+                    <input type="text" class="form-control" style="-webkit-text-security: disc" name="monitoring-api-token" id="monitoring-api-token"
+                           {{ secret_attrs|raw }}
+                           placeholder="{{ uses_token ? __('Leave empty to keep the current token', 'ivertixmonitoring') : '' }}">
+                    <div class="form-hint">
+                        {{ __('Requires i-Vertix Monitoring 24.10 or later.', 'ivertixmonitoring') }}
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="mb-3">
-            <label class="form-label" for="monitoring-username">{{ __("Monitoring username") }}</label>
-            <input type="text" class="form-control" name="monitoring-username" id="monitoring-username"
-                   placeholder="Username" value="{{ current_config['monitoring-username'] ?? "" }}">
-        </div>
-        <div class="mb-3">
-            <label class="form-label" for="monitoring-password">{{ __("Monitoring password") }}</label>
-            <input type="password" class="form-control" name="monitoring-password" id="monitoring-password"
-                   placeholder="Password">
+            {{ fields.dropdownYesNo(
+                'monitoring-verify-tls',
+                current_config['monitoring-verify-tls'],
+                __('Verify TLS certificate', 'ivertixmonitoring'),
+                field_options|merge({
+                    helper: __('Disable only if the monitoring server uses a self-signed certificate', 'ivertixmonitoring')
+                })
+            ) }}
         </div>
         <div class="mb-3">
             {{ fields.dropdownYesNo(

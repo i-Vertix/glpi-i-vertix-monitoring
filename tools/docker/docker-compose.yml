@@ -1,0 +1,53 @@
+# Dev/test environment for the i-Vertix Monitoring plugin.
+# Usage (from repo root): docker compose -f tools/docker/docker-compose.yml ...
+name: ivertixmonitoring
+
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: glpi
+      MARIADB_USER: glpi
+      MARIADB_PASSWORD: glpi
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  glpi12:
+    image: glpi/glpi:12.0.1
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8013:80"
+    environment:
+      GLPI_DB_HOST: db
+      GLPI_DB_PORT: "3306"
+      GLPI_DB_NAME: glpi
+      GLPI_DB_USER: glpi
+      GLPI_DB_PASSWORD: glpi
+      GLPI_CRONTAB_ENABLED: "0"
+    volumes:
+      - glpi-data:/var/glpi
+      - ../..:/var/www/glpi/plugins/ivertixmonitoring
+      # allows requests from the plugin to the mock API (private docker network)
+      - ./local_define.php:/var/www/glpi/config/local_define.php:ro
+
+  # Minimal fake of the i-Vertix Monitoring (Centreon) REST API.
+  # Plugin settings: URL http://mock-api:8080/centreon/api/latest/, user admin, password admin
+  mock-api:
+    image: php:8.3-cli-alpine
+    command: ["php", "-S", "0.0.0.0:8080", "/mock-api/router.php"]
+    volumes:
+      - ./mock-api:/mock-api
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  db:
+  glpi-data:

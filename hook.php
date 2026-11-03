@@ -28,7 +28,9 @@
  * -------------------------------------------------------------------------
  */
 
+use GlpiPlugin\Ivertixmonitoring\Config as PluginConfig;
 use GlpiPlugin\Ivertixmonitoring\Host;
+use GlpiPlugin\Ivertixmonitoring\Profile as PluginProfile;
 
 /**
  * Plugin install process
@@ -43,6 +45,8 @@ function plugin_ivertixmonitoring_install($version)
     $default_charset   = DBConnection::getDefaultCharset();
     $default_collation = DBConnection::getDefaultCollation();
 
+    $migration = new Migration(PLUGIN_IVERTIXMONITORING_VERSION);
+
     $table = Host::getTable();
     if (!$DB->tableExists($table)) {
         $query = "CREATE TABLE `$table` (
@@ -50,14 +54,38 @@ function plugin_ivertixmonitoring_install($version)
                   `itemtype`        varchar(100) not null,
                   `item_id`         int UNSIGNED not null,
                   `monitoring_id`   int UNSIGNED not null,
-                  `monitoring_type` varchar(100) default 'host'
+                  `monitoring_type` varchar(100) default 'host',
+                  UNIQUE KEY `unicity` (`itemtype`, `item_id`),
+                  KEY `{$table}_index2` (`monitoring_type`, `monitoring_id`)
                  ) ENGINE=InnoDB
                  DEFAULT CHARSET={$default_charset}
                  COLLATE={$default_collation}";
         $DB->doQuery($query);
-        $DB->doQuery("CREATE INDEX {$table}_index1 ON `$table` (itemtype, item_id);");
-        $DB->doQuery("CREATE INDEX {$table}_index2 ON `$table` (monitoring_type, monitoring_id);");
+    } elseif (!isIndex($table, 'unicity')) {
+        // 12.0.0: one link per asset; keep the oldest link of duplicates before adding the unique key
+        $kept = [];
+        foreach ($DB->request(['SELECT' => ['id', 'itemtype', 'item_id'], 'FROM' => $table, 'ORDER' => 'id']) as $row) {
+            $key = $row['itemtype'] . '#' . $row['item_id'];
+            if (isset($kept[$key])) {
+                $DB->delete($table, ['id' => $row['id']]);
+            } else {
+                $kept[$key] = true;
+            }
+        }
+        $migration->dropKey($table, "{$table}_index1");
+        $migration->addKey($table, ['itemtype', 'item_id'], 'unicity', 'UNIQUE');
+        $migration->executeMigration();
     }
+
+    PluginProfile::installRights();
+
+    // add missing config values with their defaults (fresh install and upgrade)
+    $current_config = Config::getConfigurationValues(PluginConfig::CONTEXT);
+    $missing_config = array_diff_key(PluginConfig::DEFAULTS, $current_config);
+    if ($missing_config !== []) {
+        Config::setConfigurationValues(PluginConfig::CONTEXT, $missing_config);
+    }
+
     return true;
 }
 
@@ -68,20 +96,18 @@ function plugin_ivertixmonitoring_install($version)
  */
 function plugin_ivertixmonitoring_uninstall()
 {
-    /** @var DBmysql $DB */
-    global $DB;
-
     $tables = [Host::getTable(), ];
 
     foreach ($tables as $table) {
         $migration = new Migration(PLUGIN_IVERTIXMONITORING_VERSION);
         $migration->displayMessage("Uninstalling $table");
         $migration->dropTable($table);
-        $DB->error();
     }
 
     $config = new Config();
-    $config->deleteByCriteria(['context' => 'plugin:ivertixmonitoring']);
+    $config->deleteByCriteria(['context' => PluginConfig::CONTEXT]);
+
+    PluginProfile::uninstallRights();
 
     return true;
 }
@@ -90,7 +116,7 @@ function plugin_ivertixmonitoring_getAddSearchOptionsNew($itemtype)
 {
     $sopt = [];
 
-    if ($itemtype === 'Computer') {
+    if (in_array($itemtype, Host::LINKABLE_ITEMTYPES, true) && Host::canView()) {
         $sopt[] = [
             'id'               => 6942,
             'table'            => Host::getTable(),
@@ -102,7 +128,9 @@ function plugin_ivertixmonitoring_getAddSearchOptionsNew($itemtype)
             'nosort'           => true,
             'massiveaction'    => false,
             'joinparams'       => [
-                'jointype' => 'itemtype_item',
+                'jointype'                 => 'itemtype_item',
+                // the link table uses `item_id` instead of GLPI's usual `items_id`
+                'specific_items_id_column' => 'item_id',
             ],
         ];
     }

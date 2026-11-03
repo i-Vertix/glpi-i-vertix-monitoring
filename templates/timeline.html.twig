@@ -32,10 +32,10 @@
                 class="table table-vcenter">
             <thead>
             <tr>
-                <th>{{ __('Date') }}</th>
-                <th>{{ __('Content') }}</th>
-                <th>{{ __('Status') }}</th>
-                <th>{{ __('Tries') }}</th>
+                <th>{{ __('Date', 'ivertixmonitoring') }}</th>
+                <th>{{ __('Content', 'ivertixmonitoring') }}</th>
+                <th>{{ __('Status', 'ivertixmonitoring') }}</th>
+                <th>{{ __('Tries', 'ivertixmonitoring') }}</th>
                 <th class="w-1"></th>
             </tr>
             </thead>
@@ -44,7 +44,7 @@
                 <tr>
                     <td class="text-muted">{{ event.date }}</td>
                     <td class="text-muted">{{ event.content }}</td>
-                    <td class="text-muted">{{ event.status }}</td>
+                    <td class="text-muted">{{ status_labels[event.status] ?? event.status }}</td>
                     <td class="text-muted">{{ event.tries }}</td>
                 </tr>
             {% endfor %}
@@ -53,6 +53,6 @@
     </div>
 {% else %}
     <div class="alert alert-info mt-3" role="alert">
-        <h4 class="alert-title">{{ __("No event to show", 'ivertixmonitoring') }}</h4>
+        <h4 class="alert-title">{{ __('No event to show', 'ivertixmonitoring') }}</h4>
     </div>
 {% endif %}

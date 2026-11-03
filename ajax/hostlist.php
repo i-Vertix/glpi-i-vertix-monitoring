@@ -28,19 +28,30 @@
  * -------------------------------------------------------------------------
  */
 
+use Glpi\Exception\Http\BadRequestHttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
+
+use function Safe\json_encode;
 
 header("Content-Type: application/json; charset=UTF-8");
 Html::header_nocache();
 
 Session::checkLoginUser();
-Session::checkSeveralRightsOr(['computer' => UPDATE, 'networking' => UPDATE]);
+Session::checkRight(Host::$rightname, UPDATE);
 
-$hosts = Host::getHostList(
-    $_POST["searchText"] ?? null,
-    isset($_POST["page_limit"]) ? (int)$_POST["page_limit"] : null,
-    isset($_POST["page"]) ? (int)$_POST["page"] : null
-);
-echo json_encode(["results" => array_map(static function ($i) {
-    return ["id" => $i["id"], "text" => $i["name"]];
-}, $hosts)]);
+$searchText = $_POST["searchText"] ?? null;
+if ($searchText !== null && !is_string($searchText)) {
+    throw new BadRequestHttpException("Invalid parameter: 'searchText'");
+}
+$limit = filter_var($_POST["page_limit"] ?? 100, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000]]);
+$page = filter_var($_POST["page"] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 10000]]);
+if ($limit === false || $page === false) {
+    throw new BadRequestHttpException("Invalid parameter: 'page_limit' or 'page'");
+}
+
+$hosts = Host::getHostList($searchText, $limit, $page);
+echo json_encode([
+    "results" => array_map(static fn($i) => ["id" => $i["id"], "text" => $i["name"]], $hosts),
+    // GLPI's select2 setup loads the next page while `count` reaches the page size
+    "count" => count($hosts),
+]);

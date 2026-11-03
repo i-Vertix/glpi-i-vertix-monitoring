@@ -29,9 +29,7 @@
  */
 
 use Glpi\Application\View\TemplateRenderer;
-use Glpi\Exception\Http\AccessDeniedHttpException;
 use Glpi\Exception\Http\BadRequestHttpException;
-use Glpi\Exception\Http\NotFoundHttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
 header('Content-Type: text/html; charset=UTF-8');
@@ -39,39 +37,14 @@ Html::header_nocache();
 
 Session::checkLoginUser();
 
-$itemId = $_GET["item_id"] ?? null;
-$itemType = $_GET["itemtype"] ?? null;
+$host = Host::getRequestedLink(READ, READ);
+
 $period = $_GET["period"] ?? null;
-
-if (!isset($itemType)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
-}
-
-if (!isset($itemId) || !is_numeric($itemId)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
-}
-
-$itemId = (int)Toolbox::cleanInteger($itemId);
-
-if (!isset($period) || !in_array($period, ["day", "week", "month"], true)) {
+if (!in_array($period, ["day", "week", "month"], true)) {
     throw new BadRequestHttpException("Missing or invalid parameter: 'period'");
 }
 
-$item = getItemForItemtype($itemType);
-if ($item === false) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
-}
-
-if (!$item->can($itemId, READ)) {
-    throw new AccessDeniedHttpException("You don't have permission to perform this action.");
-}
-
-$host = new Host();
-if ($host->isItemLinked($itemId, $itemType)) {
-    $timeline = $host->getTimeline($_GET['period']) ?? [];
-    TemplateRenderer::getInstance()->display('@ivertixmonitoring/timeline.html.twig', [
-        'timeline' => $timeline,
-    ]);
-} else {
-    throw new NotFoundHttpException("No linked monitoring host found for item");
-}
+TemplateRenderer::getInstance()->display('@ivertixmonitoring/timeline.html.twig', [
+    'timeline' => $host->getTimeline($period) ?? [],
+    'status_labels' => Host::getStatusLabels(),
+]);

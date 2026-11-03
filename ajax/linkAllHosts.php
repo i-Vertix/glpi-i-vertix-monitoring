@@ -30,15 +30,24 @@
 
 use GlpiPlugin\Ivertixmonitoring\Host;
 
+use function Safe\json_encode;
+
 header("Content-Type: application/json; charset=UTF-8");
 Html::header_nocache();
 
 Session::checkLoginUser();
+Host::checkPostRequest();
 
 Session::checkRight('config', UPDATE);
-Session::checkRight('computer', UPDATE);
-Session::checkRight('networking', UPDATE);
+Session::checkRight(Host::$rightname, UPDATE);
 
-
-$host = new Host();
-echo json_encode("Synced " . $host::linkAll() . " assets with i-Vertix Monitoring");
+$count = Host::linkAll();
+echo json_encode(sprintf(
+    _n(
+        '%d asset linked to i-Vertix Monitoring',
+        '%d assets linked to i-Vertix Monitoring',
+        $count,
+        'ivertixmonitoring'
+    ),
+    $count
+));

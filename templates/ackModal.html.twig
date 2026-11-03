@@ -47,7 +47,7 @@
                             <input type="checkbox" class="form-check-input" id="ack-is-notify-contacts"
                                    name="is_notify_contacts" value="true"/>
                             <span class="form-check-label text-nowrap">
-                            {{ __('Notify') }}
+                            {{ __('Notify', 'ivertixmonitoring') }}
                         </span>
                             <span class="fs-6 fst-italic">
                         {{ __('If checked, a notification is sent to the contacts linked to the object to warn that the incident on the resource has been acknowledged', 'ivertixmonitoring') }}
@@ -89,7 +89,7 @@
                     <div class="w-100">
                         <div class="d-flex justify-content-between">
                             <a href="#" class="btn" data-bs-dismiss="modal">
-                                {{ __('Cancel') }}
+                                {{ __('Cancel', 'ivertixmonitoring') }}
                             </a>
                             <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="submit-ack">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
@@ -119,7 +119,7 @@
         $("#ack-is-persistent-comment").prop("checked", true);
         $("#ack-is-sticky").prop("checked", true);
         $("#ack-with-services").prop("checked", true);
-        $("#ack-comment").val("{{ __('Acknowledged by', 'ivertixmonitoring') }} {{ user_name }}");
+        $("#ack-comment").val("{{ __('Acknowledged by %s', 'ivertixmonitoring')|format(user_name)|e('js') }}");
     }
 
     $('#submit-ack').click(function () {
@@ -130,13 +130,13 @@
         });
         $.ajax({
             "type": 'POST',
-            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/ack.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/ack.php?itemtype={{ itemtype|url_encode }}&item_id={{ item_id }}",
             "data": data,
             "success": function (result) {
-                glpi_toast_info("{{ __('It may take some time for the problem to be acknowledged', 'ivertixmonitoring') }}", "{{ __('Host problem acknowledged', 'ivertixmonitoring') }}");
+                glpi_toast_info("{{ __('It may take some time for the problem to be acknowledged', 'ivertixmonitoring')|e('js') }}", "{{ __('Host problem acknowledged', 'ivertixmonitoring')|e('js') }}");
             },
             "error": function (result) {
-                glpi_toast_error("{{ __('Failed to acknowledge host problem', 'ivertixmonitoring') }}");
+                glpi_toast_error("{{ __('Failed to acknowledge host problem', 'ivertixmonitoring')|e('js') }}");
             }
         });
     });
