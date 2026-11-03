@@ -32,42 +32,53 @@ namespace GlpiPlugin\Ivertixmonitoring;
 
 use CommonDBTM;
 use CommonGLPI;
+use Config as Glpi_Config;
 use Glpi\Application\View\TemplateRenderer;
 use Session;
-use Config as Glpi_Config;
 
 class Config extends Glpi_Config
 {
+    public const CONTEXT = 'plugin:ivertixmonitoring';
+
+    /**
+     * Config values set on install/upgrade when missing.
+     * URL and credentials have no default: they must be entered by an admin.
+     */
+    public const DEFAULTS = [
+        'monitoring-sync' => '0',
+        'monitoring-verify-tls' => '1',
+    ];
+
+    /**
+     * Config values that must be set to connect to the monitoring API.
+     */
+    private const REQUIRED = ['monitoring-url', 'monitoring-username', 'monitoring-password'];
+
     public static function getTypeName($nb = 0)
     {
         return __('i-Vertix Monitoring settings', 'ivertixmonitoring');
     }
 
-    public static function getConfig()
+    public static function getConfig(): array
     {
-        return Glpi_Config::getConfigurationValues('plugin:ivertixmonitoring');
+        return Glpi_Config::getConfigurationValues(self::CONTEXT) + self::DEFAULTS;
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
-        switch ($item->getType()) {
-            case Glpi_Config::class:
-                return self::createTabEntry(
-                    self::getTypeName(),
-                    0,
-                    $item::getType(),
-                    'ti ti-heart-rate-monitor'
-                );
+        if ($item instanceof Glpi_Config) {
+            return self::createTabEntry(
+                self::getTypeName(),
+                0,
+                $item::getType(),
+                'ti ti-heart-rate-monitor'
+            );
         }
 
         return '';
     }
 
-    public static function displayTabContentForItem(
-        CommonGLPI $item,
-                   $tabnum = 1,
-                   $withtemplate = 0
-    )
+    public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
     {
         if ($item instanceof Glpi_Config) {
             return self::showForConfig($item, $withtemplate);
@@ -76,11 +87,8 @@ class Config extends Glpi_Config
         return true;
     }
 
-    public static function showForConfig(Glpi_Config $config, $withtemplate = 0)
+    public static function showForConfig(Glpi_Config $config, $withtemplate = 0): bool
     {
-        /** @var array $CFG_GLPI */
-        global $CFG_GLPI;
-
         if (!self::canUpdate()) {
             return false;
         }
@@ -94,56 +102,64 @@ class Config extends Glpi_Config
             'can_edit' => $canedit,
         ]);
 
-        $conf_ok = true;
-        $all_nok = true;
-
-        foreach ($current_config as $v) {
-            if ($v === '') {
-                $conf_ok = false;
-            } else {
-                $all_nok = false;
-            }
+        $missing = array_filter(self::REQUIRED, static fn($key) => empty($current_config[$key]));
+        if (count($missing) === count(self::REQUIRED)) {
+            // nothing configured yet
+            return true;
         }
-        if (empty($current_config)) $conf_ok = false;
-        if ($conf_ok === true) {
-            $api = new ApiClient();
-            $connected = $api->authenticate();
-
-            TemplateRenderer::getInstance()->display('@ivertixmonitoring/diagnostic.html.twig', [
-                'connected' => $connected,
-            ]);
-
-            if ($connected === true && $canedit) {
-                TemplateRenderer::getInstance()->display('@ivertixmonitoring/syncAll.html.twig', [
-                    'current_config' => $current_config,
-                ]);
-            }
-        } else if (!$all_nok) {
+        if ($missing !== []) {
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/checkField.html.twig');
+            return true;
+        }
+
+        $api = new ApiClient();
+        $connected = $api->authenticate();
+
+        TemplateRenderer::getInstance()->display('@ivertixmonitoring/diagnostic.html.twig', [
+            'connected' => $connected,
+            'error' => $api->getLastError(),
+            'private_network_blocked' => $api->isPrivateNetworkBlocked(),
+            'unencrypted' => str_starts_with(strtolower($current_config['monitoring-url']), 'http://'),
+            'context_class' => self::class,
+        ]);
+
+        if ($connected && $canedit) {
+            TemplateRenderer::getInstance()->display('@ivertixmonitoring/syncAll.html.twig', [
+                'current_config' => $current_config,
+            ]);
         }
         return true;
     }
 
+    /**
+     * Normalize the plugin settings before they are saved (hooked on `Config` PRE_ITEM_UPDATE).
+     */
     public static function prepareConfigUpdate(CommonDBTM $item): void
     {
-        if (
-            isset($item->input['monitoring-password'])
-            && ($item->input['monitoring-password'] === '')
-        ) {
+        if (!is_array($item->input) || ($item->input['config_context'] ?? null) !== self::CONTEXT) {
+            return;
+        }
+        // keep the stored password when the field is left empty
+        if (($item->input['monitoring-password'] ?? null) === '') {
             unset($item->input['monitoring-password']);
         }
-        if (!empty($item->input['monitoring-url'])) {
-            $item->input['monitoring-url'] = trim($item->input['monitoring-url']);
-            if (!str_ends_with($item->input['monitoring-url'], '/')) {
-                $item->input['monitoring-url'] .= '/';
+        if (isset($item->input['monitoring-url'])) {
+            $url = trim((string)$item->input['monitoring-url']);
+            $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+            if ($url !== '' && (!in_array($scheme, ['http', 'https'], true) || parse_url($url, PHP_URL_HOST) === null)) {
+                // keep the stored URL
+                unset($item->input['monitoring-url']);
+                Session::addMessageAfterRedirect(
+                    htmlescape(__('The monitoring API URL must be a valid http(s) URL', 'ivertixmonitoring')),
+                    false,
+                    ERROR
+                );
+                return;
             }
-//            if (!str_ends_with($item->input['monitoring-url'], 'api/latest/')) {
-//                if (!str_ends_with($item->input['monitoring-url'], 'api/')) {
-//                    $item->input['monitoring-url'] .= 'api/latest/';
-//                } else {
-//                    $item->input['monitoring-url'] .= 'latest/';
-//                }
-//            }
+            if ($url !== '' && !str_ends_with($url, '/')) {
+                $url .= '/';
+            }
+            $item->input['monitoring-url'] = $url;
         }
     }
 }

@@ -27,30 +27,38 @@
 #}
 
 <div class="d-flex flew-row align-items-center py-3 ps-2">
-    <label class="form-label pe-3 m-0" for="{{ host_dropdown_id }}">{{ __('Linekd host', 'ivertixmonitoring') }}</label>
-    {{ host_dropdown|raw }}
+    <label class="form-label pe-3 m-0" for="{{ host_dropdown_id }}">{{ __('Linked host', 'ivertixmonitoring') }}</label>
+    {% if can_link %}
+        {{ host_dropdown|raw }}
+    {% else %}
+        <span>{{ host_name ?? '-----' }}</span>
+    {% endif %}
 </div>
 
+{% if can_link %}
 <script>
     function onHostChange{{ rand }}(val) {
-        if (!val) return;
-        // link host using ajax post
+        // an empty value (dropdown cleared) removes the link
+        const hostId = (val === null || val === undefined || val === "0") ? "" : String(val);
+        if (hostId === "{{ linked_host_id > 0 ? linked_host_id : '' }}") {
+            return;
+        }
         $.ajax({
             "type": 'POST',
-            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/linkSingleHost.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+            "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/linkSingleHost.php?itemtype={{ itemtype|url_encode }}&item_id={{ item_id }}",
             "data": {
-                "host_id": val ?? "",
+                "host_id": hostId,
             },
-            "success": function (result) {
-                console.log('item linked to host:', result);
-                $(`#{{ host_dropdown_id }}`).select2('close');
+            "success": function () {
+                $('#{{ host_dropdown_id }}').select2('close');
                 reloadTab();
             },
-            "error": function (result) {
-                console.log('linking failed:', result);
-                $(`#{{ host_dropdown_id }}`).select2('close');
+            "error": function () {
+                $('#{{ host_dropdown_id }}').select2('close');
+                glpi_toast_error("{{ __('Linking the monitoring host failed', 'ivertixmonitoring')|e('js') }}");
                 reloadTab();
             }
         });
     }
 </script>
+{% endif %}

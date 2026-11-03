@@ -27,15 +27,38 @@
 #}
 
 <div class="mb-2 mt-3">
-    {% if connected == true %}
+    {% if unencrypted %}
+        <div class="alert alert-warning" role="alert">
+            {{ __('The connection to the monitoring API is not encrypted (http): the password and the token are sent in clear text. Use https if possible.', 'ivertixmonitoring') }}
+        </div>
+    {% endif %}
+    {% if connected %}
         <span class="status status-green">
-    <span class="status-dot"></span>
-    i-Vertix API CONNECTION OK
-    </span>
-    {% elseif connected == false %}
+            <span class="status-dot"></span>
+            {{ __('Connected to the i-Vertix Monitoring API', 'ivertixmonitoring') }}
+        </span>
+    {% else %}
         <span class="status status-red">
-    <span class="status-dot"></span>
-    i-Vertix API CONNECTION PROBLEM
-    </span>
+            <span class="status-dot"></span>
+            {{ __('Connection to the i-Vertix Monitoring API failed', 'ivertixmonitoring') }}
+        </span>
+        {% if error is not empty %}
+            <div class="text-muted mt-2">{{ error }}</div>
+        {% endif %}
+        {% if private_network_blocked %}
+            <div class="alert alert-warning mt-3" role="alert">
+                <div>
+                    <h4 class="alert-title">{{ __('Allow requests to the private network', 'ivertixmonitoring') }}</h4>
+                    <div class="text-secondary">
+                        {{ __('Add the following lines to the file config/local_define.php of your GLPI installation:', 'ivertixmonitoring') }}
+                    </div>
+                    <pre class="mt-2 mb-0"><code>define('GLPI_SERVERSIDE_URL_ALLOWED_PRIVATE_NETWORKS_CONTEXTS', [
+    \Agent::class,
+    \Auth::class,
+    \{{ context_class }}::class,
+]);</code></pre>
+                </div>
+            </div>
+        {% endif %}
     {% endif %}
 </div>

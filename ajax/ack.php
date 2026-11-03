@@ -28,9 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Exception\Http\AccessDeniedHttpException;
 use Glpi\Exception\Http\BadRequestHttpException;
-use Glpi\Exception\Http\NotFoundHttpException;
 use Glpi\Exception\Http\HttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
@@ -38,57 +36,27 @@ header('Content-Type: text/html; charset=UTF-8');
 Html::header_nocache();
 
 Session::checkLoginUser();
+Host::checkPostRequest();
 
-$itemId = $_GET["item_id"] ?? null;
-$itemType = $_GET["itemtype"] ?? null;
+$host = Host::getRequestedLink(READ, Host::RIGHT_ACTION);
 
-$isNotifyContacts = $_POST["is_notify_contacts"] ?? null;
-$isPersistentComment = $_POST["is_persistent_comment"] ?? null;
-$isSticky = $_POST["is_sticky"] ?? null;
-$withServices = $_POST["with_services"] ?? null;
 $comment = $_POST["comment"] ?? null;
-
-
-if (!isset($itemType)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
+foreach (["is_notify_contacts", "is_persistent_comment", "is_sticky", "with_services"] as $flag) {
+    if (!isset($_POST[$flag]) || !is_string($_POST[$flag])) {
+        throw new BadRequestHttpException("Missing or invalid acknowledge parameters");
+    }
 }
-
-if (!isset($itemId) || !is_numeric($itemId)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
-}
-
-$itemId = (int)Toolbox::cleanInteger($itemId);
-
-if (!isset($isNotifyContacts, $isPersistentComment, $isSticky, $withServices, $comment)
-    || !is_string($comment)) {
+if (!is_string($comment)) {
     throw new BadRequestHttpException("Missing or invalid acknowledge parameters");
 }
-$isNotifyContacts = $isNotifyContacts === "true";
-$isPersistentComment = $isPersistentComment === "true";
-$isSticky = $isSticky === "true";
-$withServices = $withServices === "true";
 
-$item = getItemForItemtype($itemType);
-if ($item === false) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
+if (!$host->acknowledge(
+    $comment,
+    $_POST["is_notify_contacts"] === "true",
+    $_POST["is_persistent_comment"] === "true",
+    $_POST["is_sticky"] === "true",
+    $_POST["with_services"] === "true"
+)) {
+    throw new HttpException(500, "Request failed");
 }
-
-if (!$item->can($itemId, UPDATE)) {
-    throw new AccessDeniedHttpException("You don't have permission to perform this action.");
-}
-
-$host = new Host();
-if ($host->isItemLinked($itemId, $itemType)) {
-    if (!$host->acknowledge(
-        $comment,
-        $isNotifyContacts,
-        $isPersistentComment,
-        $isSticky,
-        $withServices
-    )) {
-        throw new HttpException(500, "Request failed");
-    }
-    die("Request completed");
-}
-
-throw new NotFoundHttpException("No linked monitoring host found for item");
+echo "Request completed";

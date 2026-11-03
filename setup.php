@@ -28,14 +28,18 @@
  * -------------------------------------------------------------------------
  */
 
+use Glpi\Config\ProxyExclusion;
 use Glpi\Plugin\Hooks;
+use GlpiPlugin\Ivertixmonitoring\Config as PluginConfig;
+use GlpiPlugin\Ivertixmonitoring\Host;
+use GlpiPlugin\Ivertixmonitoring\Profile as PluginProfile;
 
-define('PLUGIN_IVERTIXMONITORING_VERSION', '11.0.0');
+define('PLUGIN_IVERTIXMONITORING_VERSION', '12.0.0');
 
 // Minimal GLPI version, inclusive
-define('PLUGIN_IVERTIXMONITORING_MIN_GLPI_VERSION', '11.0.0');
+define('PLUGIN_IVERTIXMONITORING_MIN_GLPI_VERSION', '12.0.0');
 // Maximum GLPI version, exclusive
-define('PLUGIN_IVERTIXMONITORING_MAX_GLPI_VERSION', '11.0.99');
+define('PLUGIN_IVERTIXMONITORING_MAX_GLPI_VERSION', '12.0.99');
 // Define the plugin directory
 define('IVERTIXMONITORING_DIR_PATH', __DIR__);
 
@@ -48,18 +52,26 @@ define('IVERTIXMONITORING_DIR_PATH', __DIR__);
 function plugin_init_ivertixmonitoring()
 {
     /** @var array $PLUGIN_HOOKS */
-    global $PLUGIN_HOOKS;
+    /** @var array $CFG_GLPI */
+    global $PLUGIN_HOOKS, $CFG_GLPI;
 
-    $PLUGIN_HOOKS['config_page']['ivertixmonitoring'] = '../../front/config.form.php?forcetab=GlpiPlugin\Ivertixmonitoring\Config$1';
+    $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['ivertixmonitoring'] = '../../front/config.form.php?forcetab=' . urlencode(PluginConfig::class . '$1');
 
     $PLUGIN_HOOKS[Hooks::SECURED_CONFIGS]['ivertixmonitoring'] = ['monitoring-password'];
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['ivertixmonitoring'] = [
         Config::class => [
-            GlpiPlugin\Ivertixmonitoring\Config::class,
+            PluginConfig::class,
             'prepareConfigUpdate',
         ],
     ];
+
+    // allow admins to bypass the GLPI proxy for requests to the monitoring API (Setup > General > System)
+    $CFG_GLPI['possible_proxy_exclusions']?->addExclusion(new ProxyExclusion(
+        PluginConfig::class,
+        __('i-Vertix Monitoring', 'ivertixmonitoring'),
+        __('Requests to the i-Vertix Monitoring API', 'ivertixmonitoring')
+    ));
 
     // status fixer (glpi overwrites status color from status-green ecc)
     if (
@@ -71,12 +83,16 @@ function plugin_init_ivertixmonitoring()
     }
 
 
-    Plugin::registerClass(GlpiPlugin\Ivertixmonitoring\Host::class, [
-        'addtabon' => ['Computer', 'NetworkEquipment'],
+    Plugin::registerClass(Host::class, [
+        'addtabon' => Host::LINKABLE_ITEMTYPES,
     ]);
 
-    Plugin::registerClass(GlpiPlugin\Ivertixmonitoring\Config::class, [
+    Plugin::registerClass(PluginConfig::class, [
         'addtabon' => ['Config'],
+    ]);
+
+    Plugin::registerClass(PluginProfile::class, [
+        'addtabon' => [Profile::class],
     ]);
 }
 

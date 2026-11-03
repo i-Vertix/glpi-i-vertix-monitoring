@@ -54,7 +54,7 @@
                     $('#button-sync').prop('disabled', false);
                     $('#icon').toggleClass("fa-spin");
                     $('#sync-result').toggle().removeClass("status-green").addClass("status-red");
-                    $('#sync-result-content').text("An error occurred");
+                    $('#sync-result-content').text("{{ __('An error occurred', 'ivertixmonitoring')|e('js') }}");
                 }
             });
         });

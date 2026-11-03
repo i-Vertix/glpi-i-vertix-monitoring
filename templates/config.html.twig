@@ -34,19 +34,30 @@
     {% if can_edit %}
         <input type="hidden" name="config_context" value="plugin:ivertixmonitoring">
         <div class="mb-3">
-            <label class="form-label" for="monitoring-url">{{ __("i-Vertix Monitoring API URL") }}</label>
+            <label class="form-label" for="monitoring-url">{{ __('i-Vertix Monitoring API URL', 'ivertixmonitoring') }}</label>
             <input type="text" class="form-control" name="monitoring-url" id="monitoring-url"
-                   placeholder="https://<fqdn>/centreon/api/latest/" value="{{ current_config['monitoring-url'] ?? "" }}">
+                   placeholder="https://<fqdn>/centreon/api/latest/" value="{{ current_config['monitoring-url'] ?? '' }}">
         </div>
         <div class="mb-3">
-            <label class="form-label" for="monitoring-username">{{ __("Monitoring username") }}</label>
+            <label class="form-label" for="monitoring-username">{{ __('Monitoring username', 'ivertixmonitoring') }}</label>
             <input type="text" class="form-control" name="monitoring-username" id="monitoring-username"
-                   placeholder="Username" value="{{ current_config['monitoring-username'] ?? "" }}">
+                   autocomplete="off" value="{{ current_config['monitoring-username'] ?? '' }}">
         </div>
         <div class="mb-3">
-            <label class="form-label" for="monitoring-password">{{ __("Monitoring password") }}</label>
+            <label class="form-label" for="monitoring-password">{{ __('Monitoring password', 'ivertixmonitoring') }}</label>
             <input type="password" class="form-control" name="monitoring-password" id="monitoring-password"
-                   placeholder="Password">
+                   autocomplete="new-password"
+                   placeholder="{{ current_config['monitoring-password'] is not empty ? __('Leave empty to keep the current password', 'ivertixmonitoring') : '' }}">
+        </div>
+        <div class="mb-3">
+            {{ fields.dropdownYesNo(
+                'monitoring-verify-tls',
+                current_config['monitoring-verify-tls'],
+                __('Verify TLS certificate', 'ivertixmonitoring'),
+                field_options|merge({
+                    helper: __('Disable only if the monitoring server uses a self-signed certificate', 'ivertixmonitoring')
+                })
+            ) }}
         </div>
         <div class="mb-3">
             {{ fields.dropdownYesNo(

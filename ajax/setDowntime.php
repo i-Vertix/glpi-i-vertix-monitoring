@@ -28,9 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Exception\Http\AccessDeniedHttpException;
 use Glpi\Exception\Http\BadRequestHttpException;
-use Glpi\Exception\Http\NotFoundHttpException;
 use Glpi\Exception\Http\HttpException;
 use GlpiPlugin\Ivertixmonitoring\Host;
 
@@ -38,65 +36,41 @@ header('Content-Type: text/html; charset=UTF-8');
 Html::header_nocache();
 
 Session::checkLoginUser();
+Host::checkPostRequest();
 
-$itemId = $_GET["item_id"] ?? null;
-$itemType = $_GET["itemtype"] ?? null;
-$startTime = $_POST["start_time"] ?? null;
-$endTime = $_POST["end_time"] ?? null;
-$isFixed = $_POST["is_fixed"] ?? null;
-$withServices = $_POST["with_services"] ?? null;
-$durationUnit = $_POST["duration_unit"] ?? null;
-$durationValue = $_POST["duration_value"] ?? null;
+$host = Host::getRequestedLink(READ, Host::RIGHT_ACTION);
+
+$start = Host::parseDate($_POST["start_time"] ?? null);
+$end = Host::parseDate($_POST["end_time"] ?? null);
+$isFixed = ($_POST["is_fixed"] ?? null) === "true";
+$withServices = ($_POST["with_services"] ?? null) === "true";
 $comment = $_POST["comment"] ?? null;
 
-if (!isset($itemType)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
-}
-
-if (!isset($itemId) || !is_numeric($itemId)) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
-}
-
-$itemId = (int)Toolbox::cleanInteger($itemId);
-
-if (!isset($startTime, $endTime, $isFixed, $withServices, $comment)
-    || !is_string($startTime)
-    || !is_string($endTime)
-    || !is_string($comment)) {
+if ($start === null || $end === null || $end <= $start || !is_string($comment)) {
     throw new BadRequestHttpException("Missing or invalid downtime parameters");
 }
-$withServices = $withServices === "true";
-$isFixed = $isFixed === "true";
+if ($end->getTimestamp() - $start->getTimestamp() > Host::MAX_DOWNTIME_SECONDS) {
+    throw new BadRequestHttpException("Downtime too long");
+}
 
-if ($isFixed === false) {
-    if (!isset($durationUnit, $durationValue) || !is_numeric($durationValue) || !in_array($durationUnit, ["s", "m", "h"], true)) {
+$duration = null;
+if (!$isFixed) {
+    $durationUnit = $_POST["duration_unit"] ?? null;
+    $durationValue = filter_var(
+        $_POST["duration_value"] ?? null,
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1, 'max_range' => Host::MAX_DOWNTIME_SECONDS]]
+    );
+    if ($durationValue === false || !in_array($durationUnit, ["s", "m", "h"], true)) {
         throw new BadRequestHttpException("Missing or invalid downtime parameters");
     }
-    $durationValue = (int)$durationValue;
-}
-
-$item = getItemForItemtype($itemType);
-if ($item === false) {
-    throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
-}
-
-if (!$item->can($itemId, UPDATE)) {
-    throw new AccessDeniedHttpException("You don't have permission to perform this action.");
-}
-
-$host = new Host();
-if ($host->isItemLinked($itemId, $itemType)) {
-    if (!$host->setDowntime(
-        $startTime,
-        $endTime,
-        $isFixed,
-        $isFixed ? null : ["unit" => $durationUnit, "value" => $durationValue],
-        $comment,
-        $withServices
-    )) {
-        throw new HttpException(500, "Request failed");
+    $duration = Host::convertDuration($durationUnit, $durationValue);
+    if ($duration > Host::MAX_DOWNTIME_SECONDS) {
+        throw new BadRequestHttpException("Downtime too long");
     }
-    die("Request completed");
 }
 
-throw new NotFoundHttpException("No linked monitoring host found for item");
+if (!$host->setDowntime($start, $end, $isFixed, $duration, $comment, $withServices)) {
+    throw new HttpException(500, "Request failed");
+}
+echo "Request completed";

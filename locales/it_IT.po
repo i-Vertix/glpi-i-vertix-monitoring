@@ -1,30 +1,28 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: \n"
+"Project-Id-Version: i-Vertix Monitoring plugin for GLPI\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-13 16:11+0200\n"
-"PO-Revision-Date: 2025-10-13 16:48+0200\n"
-"Last-Translator: \n"
-"Language-Team: \n"
+"POT-Creation-Date: 2026-11-03 17:46+0100\n"
+"PO-Revision-Date: 2026-11-03 16:00+0100\n"
+"Last-Translator: i-Vertix\n"
+"Language-Team: Italian\n"
 "Language: it_IT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.6\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: templates/ackModal.html.twig
 msgid "Acknowledge problem"
-msgstr "Problema acknowledged"
+msgstr "Acknowledge del problema"
 
 #: templates/ackModal.html.twig templates/downtimeModal.html.twig
 msgid "Comment"
 msgstr "Commento"
+
+#: templates/ackModal.html.twig
+msgid "Notify"
+msgstr "Notifica"
 
 #: templates/ackModal.html.twig
 msgid ""
@@ -32,7 +30,7 @@ msgid ""
 "warn that the incident on the resource has been acknowledged"
 msgstr ""
 "Se selezionato, viene inviata una notifica ai contatti collegati all'oggetto "
-"per avvisare che l'incidente sulla risorsa è stato acknowledged"
+"per avvisare che il problema della risorsa è stato acknowledged"
 
 #: templates/ackModal.html.twig
 msgid "Sticky"
@@ -44,40 +42,102 @@ msgstr "Persistente"
 
 #: templates/ackModal.html.twig
 msgid "Acknowledge services attached to host"
-msgstr "Acknowledge i servizi attacati all' host"
+msgstr "Acknowledge anche dei servizi dell'host"
+
+#: templates/ackModal.html.twig templates/downtimeModal.html.twig
+msgid "Cancel"
+msgstr "Annulla"
 
 #: templates/ackModal.html.twig
-msgid "Acknowledged by"
-msgstr "Acknowledgement fatto da"
+#, php-format
+msgid "Acknowledged by %s"
+msgstr "Acknowledged da %s"
 
 #: templates/ackModal.html.twig
 msgid "It may take some time for the problem to be acknowledged"
 msgstr ""
-"Potrebbe volerci un po' di tempo prima che il problema risulta acknowledged"
+"Potrebbe volerci un po' di tempo prima che il problema risulti acknowledged"
 
 #: templates/ackModal.html.twig
 msgid "Host problem acknowledged"
-msgstr "Problema di host acknowledged"
+msgstr "Problema dell'host acknowledged"
 
 #: templates/ackModal.html.twig
 msgid "Failed to acknowledge host problem"
-msgstr "Non è stato possibile fare l'acknowledgement del problema del host"
+msgstr "Impossibile fare l'acknowledge del problema dell'host"
 
 #: templates/checkField.html.twig
 msgid "A field is missing!"
-msgstr "C'é un campo mancante"
+msgstr "Manca un campo!"
 
 #: templates/checkField.html.twig
 msgid "Please check again"
-msgstr "Controlla nuovamente"
+msgstr "Ricontrolla i dati inseriti"
+
+#: templates/config.html.twig
+msgid "i-Vertix Monitoring API URL"
+msgstr "URL dell'API di i-Vertix Monitoring"
+
+#: templates/config.html.twig
+msgid "Monitoring username"
+msgstr "Nome utente del monitoraggio"
+
+#: templates/config.html.twig
+msgid "Monitoring password"
+msgstr "Password del monitoraggio"
+
+#: templates/config.html.twig
+msgid "Leave empty to keep the current password"
+msgstr "Lascia vuoto per mantenere la password attuale"
+
+#: templates/config.html.twig
+msgid "Verify TLS certificate"
+msgstr "Verifica il certificato TLS"
+
+#: templates/config.html.twig
+msgid "Disable only if the monitoring server uses a self-signed certificate"
+msgstr ""
+"Disattiva solo se il server di monitoraggio usa un certificato autofirmato"
 
 #: templates/config.html.twig
 msgid "Sync asset link to monitoring"
-msgstr "Salva un link sul asset nel monitoraggio"
+msgstr "Salva il link dell'asset nel monitoraggio"
+
+#: templates/diagnostic.html.twig
+msgid "The connection to the monitoring API is not encrypted (http): the password and the token are sent in clear text. Use https if possible."
+msgstr "La connessione all'API di monitoraggio non è cifrata (http): password e token vengono trasmessi in chiaro. Se possibile usa https."
+
+#: templates/diagnostic.html.twig
+msgid "Connected to the i-Vertix Monitoring API"
+msgstr "Connesso all'API di i-Vertix Monitoring"
+
+#: templates/diagnostic.html.twig
+msgid "Connection to the i-Vertix Monitoring API failed"
+msgstr "Connessione all'API di i-Vertix Monitoring non riuscita"
+
+#: templates/diagnostic.html.twig
+msgid "Allow requests to the private network"
+msgstr "Consenti le richieste verso la rete privata"
+
+#: templates/diagnostic.html.twig
+msgid ""
+"Add the following lines to the file config/local_define.php of your GLPI "
+"installation:"
+msgstr ""
+"Aggiungi le seguenti righe al file config/local_define.php della tua "
+"installazione GLPI:"
 
 #: templates/downtimeModal.html.twig
 msgid "Set downtime"
-msgstr "Settare downtime"
+msgstr "Imposta downtime"
+
+#: templates/downtimeModal.html.twig
+msgid "From"
+msgstr "Da"
+
+#: templates/downtimeModal.html.twig
+msgid "To"
+msgstr "A"
 
 #: templates/downtimeModal.html.twig
 msgid "fixed"
@@ -101,24 +161,29 @@ msgstr "ore"
 
 #: templates/downtimeModal.html.twig
 msgid "Set downtime on services attached to host"
-msgstr "Settare downtime su un servizio attacato ad un host"
+msgstr "Imposta il downtime anche sui servizi dell'host"
 
 #: templates/downtimeModal.html.twig
-msgid "Downtime set by"
-msgstr "Downtime settato da"
+#, php-format
+msgid "Downtime set by %s"
+msgstr "Downtime impostato da %s"
 
 #: templates/downtimeModal.html.twig
 msgid "It may take some time for the downtime to appear"
 msgstr ""
-"Potrebbe volerci un po' di tempo prima che il problema risulta in downtime"
+"Potrebbe volerci un po' di tempo prima che il downtime venga visualizzato"
 
 #: templates/downtimeModal.html.twig
 msgid "Downtime set"
-msgstr "Downtime settato"
+msgstr "Downtime impostato"
 
 #: templates/downtimeModal.html.twig
 msgid "Failed to set the downtime"
-msgstr "Non è stato possibile settare la downtime"
+msgstr "Impossibile impostare il downtime"
+
+#: templates/host.html.twig
+msgid "Host information"
+msgstr "Informazioni host"
 
 #: templates/host.html.twig
 msgid "Check"
@@ -129,8 +194,32 @@ msgid "Downtime"
 msgstr "Downtime"
 
 #: templates/host.html.twig
+msgid "General"
+msgstr "Generale"
+
+#: templates/host.html.twig templates/timeline.html.twig
+msgid "Status"
+msgstr "Stato"
+
+#: templates/host.html.twig
 msgid "Acknowledge"
 msgstr "Acknowledge"
+
+#: templates/host.html.twig
+msgid "Name"
+msgstr "Nome"
+
+#: templates/host.html.twig
+msgid "Alias"
+msgstr "Alias"
+
+#: templates/host.html.twig
+msgid "FQDN"
+msgstr "FQDN"
+
+#: templates/host.html.twig
+msgid "Last check"
+msgstr "Ultimo controllo"
 
 #: templates/host.html.twig
 msgid "Next check"
@@ -145,24 +234,28 @@ msgid "Host in downtime"
 msgstr "Host in downtime"
 
 #: templates/host.html.twig
-msgid "From :"
-msgstr "Da :"
+#, php-format
+msgid "From: %s"
+msgstr "Da: %s"
 
 #: templates/host.html.twig
-msgid "To :"
-msgstr "A :"
+#, php-format
+msgid "To: %s"
+msgstr "A: %s"
 
 #: templates/host.html.twig
-msgid "Author name :"
-msgstr "Nome :"
+#, php-format
+msgid "Author: %s"
+msgstr "Autore: %s"
 
 #: templates/host.html.twig
-msgid "Comment :"
-msgstr "Commento :"
+#, php-format
+msgid "Comment: %s"
+msgstr "Commento: %s"
 
 #: templates/host.html.twig
-msgid "Cancel"
-msgstr "Cancella"
+msgid "Cancel downtime"
+msgstr "Termina downtime"
 
 #: templates/host.html.twig
 msgid "Services"
@@ -174,96 +267,203 @@ msgstr "Timeline"
 
 #: templates/host.html.twig
 msgid "Host check sent"
-msgstr "Commando di ricontrollo inviato"
+msgstr "Controllo dell'host inviato"
 
 #: templates/host.html.twig
 msgid "Failed to send host check"
-msgstr "Non è stato possibile mandare il command di ricontrollo del host"
+msgstr "Impossibile inviare il controllo dell'host"
 
 #: templates/host.html.twig
 msgid "It may take some time for the downtime to disappear"
-msgstr ""
-"Potrebbe volerci un po' di tempo prima che il problema non risulta più in "
-"downtime"
+msgstr "Potrebbe volerci un po' di tempo prima che il downtime scompaia"
 
 #: templates/host.html.twig
 msgid "Downtime canceled"
-msgstr "Downtime cancellato"
+msgstr "Downtime terminato"
 
 #: templates/host.html.twig
 msgid "Failed to cancel the downtime"
-msgstr "Non è stato possibile cancellare la downtime"
+msgstr "Impossibile terminare il downtime"
+
+#: templates/hosttimeline.html.twig
+msgid "1 Day"
+msgstr "1 giorno"
+
+#: templates/hosttimeline.html.twig
+msgid "1 Week"
+msgstr "1 settimana"
+
+#: templates/hosttimeline.html.twig
+msgid "1 Month"
+msgstr "1 mese"
 
 #: templates/invalidhost.html.twig
 msgid "The linked monitoring host does not exist anymore"
-msgstr "Il host collegato non esiste piú"
+msgstr "L'host di monitoraggio collegato non esiste più"
 
 #: templates/noconnection.html.twig
 msgid "i-Vertix Monitoring API is not available. Please check connection"
 msgstr ""
-"L' i-Vertix Monitoring API non é raggiungibile. Controlla la connessione"
+"L'API di i-Vertix Monitoring non è raggiungibile. Controlla la connessione"
 
 #: templates/nohost.html.twig
 msgid "No i-Vertix Monitoring host is linked to this item"
-msgstr "Nessun i-Vertix Monitoring host é collegato a questo dispositivo"
+msgstr "Nessun host di i-Vertix Monitoring è collegato a questo asset"
 
 #: templates/selecthost.html.twig
-msgid "Linekd host"
+msgid "Linked host"
 msgstr "Host collegato"
+
+#: templates/selecthost.html.twig
+msgid "Linking the monitoring host failed"
+msgstr "Collegamento dell'host di monitoraggio non riuscito"
 
 #: templates/syncAll.html.twig
 msgid "Sync all assets to monitoring"
-msgstr "Salva un link su tutti gli asset nel monitoraggio"
+msgstr "Salva il link di tutti gli asset collegati nel monitoraggio"
 
 #: templates/syncAll.html.twig
 msgid "Automatically link assets to monitoring hosts (by name)"
-msgstr ""
-"Salva un link in automatico su tutti gli asset nel monitoraggio (per nome)"
+msgstr "Collega automaticamente gli asset agli host di monitoraggio (per nome)"
+
+#: templates/syncAll.html.twig
+msgid "An error occurred"
+msgstr "Si è verificato un errore"
+
+#: templates/timeline.html.twig
+msgid "Date"
+msgstr "Data"
+
+#: templates/timeline.html.twig
+msgid "Content"
+msgstr "Contenuto"
+
+#: templates/timeline.html.twig
+msgid "Tries"
+msgstr "Tentativi"
 
 #: templates/timeline.html.twig
 msgid "No event to show"
 msgstr "Nessun evento da mostrare"
 
-#: hook.php:98
+#: ajax/linkAllHosts.php:47
+#, php-format
+msgid "%d asset linked to i-Vertix Monitoring"
+msgid_plural "%d assets linked to i-Vertix Monitoring"
+msgstr[0] "%d asset collegato a i-Vertix Monitoring"
+msgstr[1] "%d asset collegati a i-Vertix Monitoring"
+
+#: hook.php:124
 msgid "i-Vertix Monitoring Host Status"
-msgstr "i-Vertix Monitoring Host Status"
+msgstr "Stato host i-Vertix Monitoring"
 
-#: src/Config.php:43
+#: setup.php:72 src/Host.php:93 src/Profile.php:54 src/Profile.php:94
+msgid "i-Vertix Monitoring"
+msgstr "i-Vertix Monitoring"
+
+#: setup.php:73
+msgid "Requests to the i-Vertix Monitoring API"
+msgstr "Richieste all'API di i-Vertix Monitoring"
+
+#: src/ApiClient.php:108
+msgid "The monitoring API credentials are not configured"
+msgstr "Le credenziali dell'API di monitoraggio non sono configurate"
+
+#: src/ApiClient.php:124
+msgid "Authentication failed, please check the username and the password"
+msgstr "Autenticazione non riuscita, controlla nome utente e password"
+
+#: src/ApiClient.php:129 src/ApiClient.php:207
+msgid "The monitoring API returned an unexpected response"
+msgstr "L'API di monitoraggio ha restituito una risposta inattesa"
+
+#: src/ApiClient.php:160
+msgid "The monitoring API URL is not configured"
+msgstr "L'URL dell'API di monitoraggio non è configurato"
+
+#: src/ApiClient.php:190
+#, php-format
+msgid "The monitoring API answered with HTTP status %d"
+msgstr "L'API di monitoraggio ha risposto con lo stato HTTP %d"
+
+#: src/ApiClient.php:198
+msgid ""
+"The monitoring API URL points to a private network, which GLPI blocks by "
+"default"
+msgstr ""
+"L'URL dell'API di monitoraggio punta a una rete privata, che GLPI blocca per "
+"impostazione predefinita"
+
+#: src/ApiClient.php:201
+#, php-format
+msgid "The monitoring API is not reachable: %s"
+msgstr "L'API di monitoraggio non è raggiungibile: %s"
+
+#: src/Config.php:59
 msgid "i-Vertix Monitoring settings"
-msgstr "i-Vertix Monitoring impostazioni"
+msgstr "Impostazioni di i-Vertix Monitoring"
 
-#~ msgid "You don't have permission to perform this action."
-#~ msgstr "Non hai il permesso di eseguire questa azione."
+#: src/Config.php:153
+msgid "The monitoring API URL must be a valid http(s) URL"
+msgstr "L'URL dell'API di monitoraggio deve essere un URL http(s) valido"
 
-#~ msgid "linking host failed"
-#~ msgstr "collegamento dell'host fallito"
+#: src/Host.php:104
+msgid "Read"
+msgstr "Lettura"
 
-#~ msgid "i-Vertix Monitoring API URL"
-#~ msgstr "i-Vertix Monitoring API URL"
+#: src/Host.php:106
+msgid "Link hosts"
+msgstr "Collegare host"
 
-#~ msgid "Monitoring username"
-#~ msgstr "Monitoring username"
+#: src/Host.php:107
+msgid "Link and unlink assets and monitoring hosts"
+msgstr "Collegare e scollegare asset e host di monitoraggio"
 
-#~ msgid "Monitoring password"
-#~ msgstr "Monitoring password"
+#: src/Host.php:110
+msgid "Run actions"
+msgstr "Eseguire azioni"
 
-#~ msgid "Status"
-#~ msgstr "Status"
+#: src/Host.php:111
+msgid "Send checks, set and cancel downtimes, acknowledge problems"
+msgstr "Inviare controlli, impostare e terminare downtime, fare l'acknowledge dei problemi"
 
-#~ msgid "Name"
-#~ msgstr "Nome"
+#: src/Host.php:129
+msgid "Up"
+msgstr "Up"
 
-#~ msgid "Alias"
-#~ msgstr "Alias"
+#: src/Host.php:130
+msgid "Down"
+msgstr "Down"
 
-#~ msgid "FQDN"
-#~ msgstr "FQDN"
+#: src/Host.php:131
+msgid "Unreachable"
+msgstr "Irraggiungibile"
 
-#~ msgid "1 Day"
-#~ msgstr "1 giorno"
+#: src/Host.php:132
+msgid "OK"
+msgstr "OK"
 
-#~ msgid "1 Week"
-#~ msgstr "1 settimana"
+#: src/Host.php:133
+msgid "Warning"
+msgstr "Avviso"
 
-#~ msgid "1 Month"
-#~ msgstr "1 mese"
+#: src/Host.php:134
+msgid "Critical"
+msgstr "Critico"
+
+#: src/Host.php:135
+msgid "Unknown"
+msgstr "Sconosciuto"
+
+#: src/Host.php:136
+msgid "Pending"
+msgstr "In attesa"
+
+#: src/Host.php:302
+#, php-format
+msgid "Problem acknowledged by %1$s on %2$s"
+msgstr "Problema acknowledged da %1$s il %2$s"
+
+#: src/Host.php:709
+msgid "Linked monitoring host"
+msgstr "Host di monitoraggio collegato"

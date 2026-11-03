@@ -27,31 +27,35 @@
 #}
 
 <div class="d-flex flew-row align-items-center py-3 ps-2">
-    <h1 class="me-3 m-0">Host Information</h1>
+    <h1 class="me-3 m-0">{{ __('Host information', 'ivertixmonitoring') }}</h1>
     <img class="h-4 d-inline-block me-3" alt="i-vertix monitoring" src="{{ logo }}"/>
-    <button type="button" class="btn ms-1 me-1" id="button-check">
-        <i class="ti ti-refresh"></i>
-        <span>{{ __('Check', 'ivertixmonitoring') }}</span>
-    </button>
-    <button type="button" class="btn ms-1 me-1" id="button-downtime">
-        <i class="ti ti-clock-pause"></i>
-        <span>{{ __('Downtime', 'ivertixmonitoring') }}</span>
-    </button>
+    {% if can_act %}
+        <button type="button" class="btn ms-1 me-1" id="button-check">
+            <i class="ti ti-refresh"></i>
+            <span>{{ __('Check', 'ivertixmonitoring') }}</span>
+        </button>
+        <button type="button" class="btn ms-1 me-1" id="button-downtime">
+            <i class="ti ti-clock-pause"></i>
+            <span>{{ __('Downtime', 'ivertixmonitoring') }}</span>
+        </button>
+    {% endif %}
 </div>
-<h2 class="p-2 m-0">General</h2>
+<h2 class="p-2 m-0">{{ __('General', 'ivertixmonitoring') }}</h2>
 
-{% include '@ivertixmonitoring/downtimeModal.html.twig' %}
-{% include '@ivertixmonitoring/ackModal.html.twig' %}
+{% if can_act %}
+    {% include '@ivertixmonitoring/downtimeModal.html.twig' %}
+    {% include '@ivertixmonitoring/ackModal.html.twig' %}
+{% endif %}
 
 <div class="datagrid container text-center my-2">
     <div class="row">
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Status") }}</div>
+                <div class="datagrid-title fw-bold">{{ __('Status', 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">
                     {% if host.status == 'UP' %}
                         <span class="status status-green">
-                        {{ host.status }}
+                        {{ status_labels[host.status] ?? host.status }}
                         </span>
                     {% elseif host.status == 'DOWN' %}
                         {% if host.acknowledged != false %}
@@ -60,9 +64,9 @@
                                   data-bs-placement="top"></span>
                         {% endif %}
                         <span class="status status-red">
-                            {{ host.status }}
+                            {{ status_labels[host.status] ?? host.status }}
                         </span>
-                        {% if host.acknowledged == false %}
+                        {% if host.acknowledged == false and can_act %}
                             <button type="button" class="btn mt-1" id="button-ack">
                                 <i class="ti ti-user"></i>
                                 <span>{{ __('Acknowledge', 'ivertixmonitoring') }}</span>
@@ -70,7 +74,7 @@
                         {% endif %}
                     {% else %}
                         <span class="status status-orange">
-                        {{ host.status }}
+                        {{ status_labels[host.status] ?? host.status }}
                         </span>
                     {% endif %}
                 </div>
@@ -78,37 +82,37 @@
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Name") }}</div>
+                <div class="datagrid-title fw-bold">{{ __('Name', 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.name }}</div>
             </div>
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Alias") }}</div>
+                <div class="datagrid-title fw-bold">{{ __('Alias', 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.alias }}</div>
             </div>
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("FQDN") }}</div>
+                <div class="datagrid-title fw-bold">{{ __('FQDN', 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.fqdn }}</div>
             </div>
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Last check") }}</div>
+                <div class="datagrid-title fw-bold">{{ __('Last check', 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.last_check }}</div>
             </div>
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Next check", 'ivertixmonitoring') }}</div>
+                <div class="datagrid-title fw-bold">{{ __('Next check', 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.next_check }}</div>
             </div>
         </div>
         <div class="col">
             <div class="datagrid-item">
-                <div class="datagrid-title fw-bold">{{ __("Check period", 'ivertixmonitoring') }}</div>
+                <div class="datagrid-title fw-bold">{{ __('Check period', 'ivertixmonitoring') }}</div>
                 <div class="datagrid-content mt-2">{{ host.check_period }}</div>
             </div>
         </div>
@@ -119,16 +123,18 @@
     <div class="row row-deck p-2 mb-2">
         {% for downtime in host["downtimes"] %}
             <div class="col-md-4">
-                <div class="card mt-3" style="max-height: 200px;">
+                <div class="card mt-3">
                     <div class="card-status-start bg-red"></div>
                     <div class="card-body">
                         <h3 class="card-title m-0 text-truncate">{{ __('Host in downtime', 'ivertixmonitoring') }}</h3>
-                        <div>{{ __('From :', 'ivertixmonitoring') }} {{ downtime.start_time }}</div>
-                        <div>{{ __('To :', 'ivertixmonitoring') }} {{ downtime.end_time }}</div>
-                        <div>{{ __('Author name :', 'ivertixmonitoring') }} {{ downtime.author_name }}</div>
-                        <div>{{ __('Comment :', 'ivertixmonitoring') }} {{ downtime.comment }}</div>
-                        <button class="btn mt-2"
-                                id="cancel_downtime_{{ downtime.id }}">{{ __('Cancel', 'ivertixmonitoring') }}</button>
+                        <div>{{ __('From: %s', 'ivertixmonitoring')|format(downtime.start_time) }}</div>
+                        <div>{{ __('To: %s', 'ivertixmonitoring')|format(downtime.end_time) }}</div>
+                        <div>{{ __('Author: %s', 'ivertixmonitoring')|format(downtime.author_name) }}</div>
+                        <div>{{ __('Comment: %s', 'ivertixmonitoring')|format(downtime.comment) }}</div>
+                        {% if can_act %}
+                            <button type="button" class="btn mt-2 cancel-downtime"
+                                    data-downtime-id="{{ downtime.id }}">{{ __('Cancel downtime', 'ivertixmonitoring') }}</button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -140,10 +146,10 @@
     <div class="card-header">
         <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
             <li class="nav-item">
-                <a href="#tabs-services-ex1" class="nav-link active" data-bs-toggle="tab">{{ __("Services", 'ivertixmonitoring') }}</a>
+                <a href="#tabs-services-ex1" class="nav-link active" data-bs-toggle="tab">{{ __('Services', 'ivertixmonitoring') }}</a>
             </li>
             <li class="nav-item">
-                <a href="#tabs-historique-ex1" class="nav-link" data-bs-toggle="tab">{{ __("Timeline", 'ivertixmonitoring') }}</a>
+                <a href="#tabs-historique-ex1" class="nav-link" data-bs-toggle="tab">{{ __('Timeline', 'ivertixmonitoring') }}</a>
             </li>
         </ul>
     </div>
@@ -153,7 +159,7 @@
     <div class="tab-content">
         <div class="tab-pane active show" id="tabs-services-ex1">
             <div class="d-flex flew-row align-items-center p-2 mt-3">
-                <h2 class="pe-3 m-0">{{ __("Services", 'ivertixmonitoring') }}</h2>
+                <h2 class="pe-3 m-0">{{ __('Services', 'ivertixmonitoring') }}</h2>
                 {% set count_ok = 0 %}
                 {% set count_w = 0 %}
                 {% set count_d = 0 %}
@@ -170,27 +176,27 @@
                     {% endif %}
                 {% endfor %}
                 <div class="d-flex align-items-center">
-                        <span class="badge bg-teal m-1" title="OK" data-bs-toggle="tooltip"
+                        <span class="badge bg-teal m-1" title="{{ status_labels['OK'] }}" data-bs-toggle="tooltip"
                               data-bs-placement="top">{{ count_ok }}</span>
-                    <span class="badge bg-orange m-1" title="WARNING" data-bs-toggle="tooltip"
+                    <span class="badge bg-orange m-1" title="{{ status_labels['WARNING'] }}" data-bs-toggle="tooltip"
                           data-bs-placement="top">{{ count_w }}</span>
-                    <span class="badge bg-red m-1" title="CRITICAL" data-bs-toggle="tooltip"
+                    <span class="badge bg-red m-1" title="{{ status_labels['CRITICAL'] }}" data-bs-toggle="tooltip"
                           data-bs-placement="top">{{ count_d }}</span>
-                    <span class="badge bg-grey m-1" title="UNKNOWN" data-bs-toggle="tooltip"
+                    <span class="badge bg-grey m-1" title="{{ status_labels['UNKNOWN'] }}" data-bs-toggle="tooltip"
                           data-bs-placement="top">{{ count_un }}</span>
                 </div>
             </div>
 
             <div class="row row-deck p-2 mb-2">
                 {% for service in host["services"] %}
-                    {% set color = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "light" : "blue" %}
-                    {% set bgcolor = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "light" : "blue" %}
+                    {% set color = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "secondary" : "blue" %}
+                    {% set bgcolor = (service.status.name == "OK") ? "green" : (service.status.name == "WARNING") ? "orange" : (service.status.name == "CRITICAL") ? "red" : (service.status.name == "UNKNOWN") ? "secondary" : "blue" %}
                     <div class="col-md-4">
                         <div class="card mt-3">
                             <div class="card-status-start bg-{{ bgcolor }}"></div>
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
-                                    <span class="status status-{{ color }}">{{ service.status.name }}</span>
+                                    <span class="status status-{{ color }}">{{ status_labels[service.status.name] ?? service.status.name }}</span>
                                     <h3 class="card-title m-0 px-2 text-truncate">{{ service["display_name"] }}</h3>
                                 </div>
                                 <div class="d-flex justify-content-between gap-2 mt-3">
@@ -214,22 +220,21 @@
     </div>
 </div>
 
+{% if can_act %}
 <script>
     $(document).ready(function () {
-        // debugger;
-
         $('#button-check').click(function () {
             $('#button-check').prop('disabled', true);
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/sendCheck.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+                "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/sendCheck.php?itemtype={{ itemtype|url_encode }}&item_id={{ item_id }}",
                 "success": function (result) {
                     $('#button-check').prop('disabled', false);
-                    glpi_toast_info("{{ __('Host check sent', 'ivertixmonitoring') }}");
+                    glpi_toast_info("{{ __('Host check sent', 'ivertixmonitoring')|e('js') }}");
                 },
                 "error": function (result) {
                     $('#button-check').prop('disabled', false);
-                    glpi_toast_info("{{ __('Failed to send host check', 'ivertixmonitoring') }}");
+                    glpi_toast_error("{{ __('Failed to send host check', 'ivertixmonitoring')|e('js') }}");
                 }
             });
         });
@@ -240,34 +245,31 @@
             resetDowntimeModal();
         });
 
-        {% if host.acknowledged == false %}
         $('#button-ack').click(function () {
             $('#modal-ack').modal('show');
 
             resetAckModal();
         });
-        {% endif %}
 
-        {% for downtime in host["downtimes"] %}
-        $('#cancel_downtime_{{ downtime.id }}').click(function () {
-            $('#cancel_downtime_{{ downtime.id }}').prop('disabled', true);
+        $('.cancel-downtime').click(function () {
+            const button = $(this);
+            button.prop('disabled', true);
             $.ajax({
                 "type": 'POST',
-                "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/cancelDowntime.php?itemtype={{ itemtype }}&item_id={{ item_id }}",
+                "url": CFG_GLPI['root_doc'] + "/plugins/ivertixmonitoring/ajax/cancelDowntime.php?itemtype={{ itemtype|url_encode }}&item_id={{ item_id }}",
                 "data": {
-                    "downtime_id": {{ downtime.id }}
+                    "downtime_id": String(button.data('downtime-id')),
                 },
-                "success": function (data) {
-                    $('#cancel_downtime_{{ downtime.id }}').prop('disabled', false);
-                    glpi_toast_info("{{ __('It may take some time for the downtime to disappear', 'ivertixmonitoring') }}", "{{ __('Downtime canceled', 'ivertixmonitoring') }}");
+                "success": function () {
+                    button.prop('disabled', false);
+                    glpi_toast_info("{{ __('It may take some time for the downtime to disappear', 'ivertixmonitoring')|e('js') }}", "{{ __('Downtime canceled', 'ivertixmonitoring')|e('js') }}");
                 },
-                "error": function (data) {
-                    $('#cancel_downtime_{{ downtime.id }}').prop('disabled', false);
-                    glpi_toast_error("{{ __('Failed to cancel the downtime', 'ivertixmonitoring') }}");
+                "error": function () {
+                    button.prop('disabled', false);
+                    glpi_toast_error("{{ __('Failed to cancel the downtime', 'ivertixmonitoring')|e('js') }}");
                 }
             });
         });
-        {% endfor %}
-
     });
 </script>
+{% endif %}

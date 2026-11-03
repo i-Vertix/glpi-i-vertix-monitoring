@@ -30,96 +30,199 @@
 
 namespace GlpiPlugin\Ivertixmonitoring;
 
-use Computer;
 use CommonDBTM;
 use CommonGLPI;
-use DateTime;
+use Computer;
+use DateTimeImmutable;
 use DateTimeZone;
 use Dropdown;
+use Exception;
+use Glpi\Application\View\TemplateRenderer;
+use Glpi\Exception\Http\AccessDeniedHttpException;
+use Glpi\Exception\Http\BadRequestHttpException;
+use Glpi\Exception\Http\HttpException;
+use Glpi\Exception\Http\NotFoundHttpException;
 use Html;
 use NetworkEquipment;
-use Glpi\Application\View\TemplateRenderer;
+use Session;
+
 use function Safe\json_encode;
-use function Safe\strtotime;
 
 class Host extends CommonDBTM
 {
+    /**
+     * Plugin right, see Profile.
+     */
+    public static string $rightname = 'plugin_ivertixmonitoring_host';
+
+    /**
+     * Right bit to send checks, set/cancel downtimes and acknowledge problems.
+     */
+    public const RIGHT_ACTION = 128;
+
+    /**
+     * Asset types that can be linked to a monitoring host.
+     */
+    public const LINKABLE_ITEMTYPES = [Computer::class, NetworkEquipment::class];
+
+    /**
+     * Longest downtime that can be set from GLPI (one year).
+     */
+    public const MAX_DOWNTIME_SECONDS = 31536000;
+
+    /**
+     * Upper bound of pages read from the API in getHostListByHostId(), in case the API ignores the page parameter.
+     */
+    private const MAX_PAGES = 1000;
+
     private ApiClient $api_client;
 
-    public function __construct(ApiClient $api_client = null)
+    /**
+     * API client shared by all instances of a request, so the API login is done only once.
+     */
+    private static ?ApiClient $shared_api_client = null;
+
+    public function __construct(?ApiClient $api_client = null)
     {
         parent::__construct();
-        if ($api_client === null) {
-            $this->api_client = new ApiClient();
-        } else {
-            $this->api_client = $api_client;
-        }
+        $this->api_client = $api_client ?? (self::$shared_api_client ??= new ApiClient());
     }
 
     public static function getTypeName($nb = 0): string
     {
-        return _n('i-Vertix Monitoring', 'i-Vertix Monitoring', $nb);
+        return __('i-Vertix Monitoring', 'ivertixmonitoring');
     }
 
+    public static function getIcon()
+    {
+        return 'ti ti-heart-rate-monitor';
+    }
+
+    public function getRights($interface = 'central')
+    {
+        return [
+            READ => __('Read', 'ivertixmonitoring'),
+            UPDATE => [
+                'short' => __('Link hosts', 'ivertixmonitoring'),
+                'long' => __('Link and unlink assets and monitoring hosts', 'ivertixmonitoring'),
+            ],
+            self::RIGHT_ACTION => [
+                'short' => __('Run actions', 'ivertixmonitoring'),
+                'long' => __('Send checks, set and cancel downtimes, acknowledge problems', 'ivertixmonitoring'),
+            ],
+        ];
+    }
+
+    public static function canRunActions(): bool
+    {
+        return Session::haveRight(self::$rightname, self::RIGHT_ACTION);
+    }
+
+    /**
+     * Translated labels of the host and service states returned by the monitoring API.
+     *
+     * @return array<string, string>
+     */
+    public static function getStatusLabels(): array
+    {
+        return [
+            'UP' => __('Up', 'ivertixmonitoring'),
+            'DOWN' => __('Down', 'ivertixmonitoring'),
+            'UNREACHABLE' => __('Unreachable', 'ivertixmonitoring'),
+            'OK' => __('OK', 'ivertixmonitoring'),
+            'WARNING' => __('Warning', 'ivertixmonitoring'),
+            'CRITICAL' => __('Critical', 'ivertixmonitoring'),
+            'UNKNOWN' => __('Unknown', 'ivertixmonitoring'),
+            'PENDING' => __('Pending', 'ivertixmonitoring'),
+        ];
+    }
+
+    public static function getStatusLabel(string $status): string
+    {
+        return self::getStatusLabels()[$status] ?? $status;
+    }
+
+    /**
+     * All monitoring hosts, indexed by id.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
     public function getHostListByHostId(): array
     {
         $api = $this->api_client;
-        $connected = $api->authenticate();
-        if ($connected === true) {
-            $items = [];
-            $page = 0;
-            $limit = 300;
-            do {
-                ++$page;
-                $list = $api->getHosts([
-                    "limit" => $limit,
-                    "page" => $page
-                ]);
-                if ($list["success"]) {
-                    $list = $list["result"];
-                    foreach ($list["result"] as $item) {
-                        $items[$item["id"]] = ["id" => $item["id"], "name" => $item["name"]];
-                    }
-                } else {
-                    break;
-                }
-            } while (count($list["result"]) >= $limit);
-            return $items;
+        if (!$api->authenticate()) {
+            return [];
         }
-        return [];
+        $items = [];
+        $limit = 300;
+        for ($page = 1; $page <= self::MAX_PAGES; $page++) {
+            $list = $api->getHosts(["limit" => $limit, "page" => $page]);
+            $result = $list["success"] ? ($list["result"]["result"] ?? null) : null;
+            if (!is_array($result)) {
+                break;
+            }
+            $before = count($items);
+            foreach ($result as $item) {
+                if (isset($item["id"], $item["name"])) {
+                    $items[(int)$item["id"]] = ["id" => (int)$item["id"], "name" => (string)$item["name"]];
+                }
+            }
+            $total = $list["result"]["meta"]["total"] ?? null;
+            if (
+                count($result) < $limit
+                || count($items) === $before // page parameter ignored by the API
+                || (is_numeric($total) && count($items) >= (int)$total)
+            ) {
+                break;
+            }
+        }
+        return $items;
     }
 
-    public static function getHostList(?string $name, ?int $limit, ?int $page): array
+    /**
+     * Monitoring hosts for the host dropdown.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    public static function getHostList(?string $name, int $limit, int $page): array
     {
-        $self = new self();
-        $api = $self->api_client;
-        $connected = $api->authenticate();
-        if ($connected === true) {
-            $query = [];
-            if (!empty($name)) {
-                $query['search'] = json_encode([
-                    'host.name' => [
-                        '$lk' => "%" . $name . "%",
-                    ],
-                ]);
-            }
-            if ($limit) {
-                $query["limit"] = $limit;
-            }
-            if ($page) {
-                $query["page"] = $page;
-            }
-            $list = $api->getHosts($query);
-            $items = [];
-            if ($list["success"]) {
-                $list = $list["result"];
-                foreach ($list["result"] as $item) {
-                    $items[] = ["id" => $item["id"], "name" => $item["name"]];
-                }
-            }
-            return $items;
+        $api = (new self())->api_client;
+        if (!$api->authenticate()) {
+            return [];
         }
-        return [];
+        $query = ["limit" => $limit, "page" => $page];
+        if ($name !== null && $name !== '') {
+            $query['search'] = json_encode([
+                'host.name' => [
+                    '$lk' => "%" . $name . "%",
+                ],
+            ]);
+        }
+        $list = $api->getHosts($query);
+        $items = [];
+        foreach (($list["success"] ? ($list["result"]["result"] ?? []) : []) as $item) {
+            if (isset($item["id"], $item["name"])) {
+                $items[] = ["id" => (int)$item["id"], "name" => (string)$item["name"]];
+            }
+        }
+        return $items;
+    }
+
+    /**
+     * Id and name of a monitoring host, or null when it does not exist (or the API is not available).
+     *
+     * @return array{id: int, name: string}|null
+     */
+    public function getMonitoringHost(int $hostId): ?array
+    {
+        if (!$this->api_client->authenticate()) {
+            return null;
+        }
+        $host = $this->api_client->getHostById($hostId);
+        if (!$host["success"] || !isset($host["result"]["id"], $host["result"]["name"])) {
+            return null;
+        }
+        return ["id" => (int)$host["result"]["id"], "name" => (string)$host["result"]["name"]];
     }
 
     public function getHostListItem(): ?array
@@ -127,356 +230,376 @@ class Host extends CommonDBTM
         if (!isset($this->fields["monitoring_id"])) {
             return null;
         }
-        $connected = $this->api_client->authenticate();
-        if ($connected === true) {
-            $host = $this->api_client->getHostById((int)$this->fields["monitoring_id"]);
-            if ($host["success"]) {
-                $host = $host["result"];
-                return ["id" => $host["id"], "name" => $host["name"]];
-            }
-        }
-        return null;
+        return $this->getMonitoringHost((int)$this->fields["monitoring_id"]);
     }
 
     public function getHostDetail(): ?array
     {
-        if (!isset($this->fields["monitoring_id"])) {
+        if (!isset($this->fields["monitoring_id"]) || !$this->api_client->authenticate()) {
             return null;
         }
-        $connected = $this->api_client->authenticate();
-        if ($connected === true) {
-            $hostDetail = $this->api_client->getHostById((int)$this->fields["monitoring_id"]);
-            $hostResources = $this->api_client->getHostResourceDetailById((int)$this->fields["monitoring_id"]);
-            $hostServices = $this->api_client->getServicesByHostId((int)$this->fields["monitoring_id"]);
-//            $hostDowntimes = $this->api_client->getHostDowntimes((int)$this->fields["monitoring_id"]);
-            if ($hostDetail["success"] && $hostResources["success"] && $hostServices["success"]) {
-                $hostDetail = $hostDetail["result"];
-                $hostResources = $hostResources["result"];
-                $hostServices = $hostServices["result"];
-                $host = [
-                    'status' => $hostResources['status']['name'],
-                    'name' => $hostResources['name'],
-                    'alias' => $hostDetail['alias'],
-                    'fqdn' => $hostResources['fqdn'],
-                    'last_check' => $hostDetail['last_check'],
-                    'next_check' => $hostDetail['next_check'],
-                    'check_period' => $hostDetail['check_period'],
-                    'in_downtime' => $hostResources['in_downtime'],
-                    'acknowledged' => $hostResources["acknowledgement"] !== null ?
-                        sprintf("Problem acknowledged by '%s' on %s%s",
-                            $hostResources["acknowledgement"]["author_name"],
-                            $hostResources["acknowledgement"]["entry_time"],
-                            trim($hostResources["acknowledgement"]["comment"]) !== "" ? " - " . $hostResources["acknowledgement"]["comment"] : ""
-                        ) : false,
-                ];
-                if ($hostResources['in_downtime']) {
-                    $host['downtimes'] = $hostResources['downtimes'];
-                }
-                $statusOrder = [2, 1, 3, 4];
-                $statusOrderMap = array_flip($statusOrder);
-                usort($hostServices["result"], static function ($a, $b) use ($statusOrderMap) {
-                    $posA = $statusOrderMap[$a["state"]] ?? PHP_INT_MAX;
-                    $posB = $statusOrderMap[$b["state"]] ?? PHP_INT_MAX;
+        $hostId = (int)$this->fields["monitoring_id"];
+        $hostDetail = $this->api_client->getHostById($hostId);
+        $hostResources = $this->api_client->getHostResourceDetailById($hostId);
+        $hostServices = $this->api_client->getServicesByHostId($hostId);
+        if (
+            !$hostDetail["success"] || !$hostResources["success"] || !$hostServices["success"]
+            || !is_array($hostDetail["result"]) || !is_array($hostResources["result"])
+        ) {
+            return null;
+        }
+        $hostDetail = $hostDetail["result"];
+        $hostResources = $hostResources["result"];
 
-                    return $posA <=> $posB;
-                });
-                $host['services'] = $hostServices['result'];
-                $host['nb_services'] = count($host['services']);
-                return $host;
+        $acknowledgement = $hostResources["acknowledgement"] ?? null;
+        $host = [
+            'status' => (string)($hostResources['status']['name'] ?? ''),
+            'name' => (string)($hostResources['name'] ?? $hostDetail['name'] ?? ''),
+            'alias' => (string)($hostDetail['alias'] ?? ''),
+            'fqdn' => (string)($hostResources['fqdn'] ?? ''),
+            'last_check' => self::formatDate($hostDetail['last_check'] ?? null),
+            'next_check' => self::formatDate($hostDetail['next_check'] ?? null),
+            'check_period' => (string)($hostDetail['check_period'] ?? ''),
+            'in_downtime' => (bool)($hostResources['in_downtime'] ?? false),
+            'acknowledged' => is_array($acknowledgement) ? self::formatAcknowledgement($acknowledgement) : false,
+            'downtimes' => [],
+        ];
+        if ($host['in_downtime'] && is_array($hostResources['downtimes'] ?? null)) {
+            foreach ($hostResources['downtimes'] as $downtime) {
+                // the id is used in the HTML and JS of the template: only accept integers
+                if (!is_array($downtime) || !is_numeric($downtime['id'] ?? null)) {
+                    continue;
+                }
+                $host['downtimes'][] = [
+                    'id' => (int)$downtime['id'],
+                    'start_time' => self::formatDate($downtime['start_time'] ?? null),
+                    'end_time' => self::formatDate($downtime['end_time'] ?? null),
+                    'author_name' => (string)($downtime['author_name'] ?? ''),
+                    'comment' => (string)($downtime['comment'] ?? ''),
+                ];
             }
         }
-        return null;
+
+        $services = is_array($hostServices["result"]["result"] ?? null) ? $hostServices["result"]["result"] : [];
+        // critical, warning, unknown, pending first
+        $statusOrderMap = array_flip([2, 1, 3, 4]);
+        usort($services, static function ($a, $b) use ($statusOrderMap) {
+            $posA = $statusOrderMap[$a["state"] ?? null] ?? PHP_INT_MAX;
+            $posB = $statusOrderMap[$b["state"] ?? null] ?? PHP_INT_MAX;
+            return $posA <=> $posB;
+        });
+        $host['services'] = $services;
+        $host['nb_services'] = count($services);
+        return $host;
+    }
+
+    /**
+     * Build the tooltip text of a host acknowledgement.
+     */
+    private static function formatAcknowledgement(array $acknowledgement): string
+    {
+        $text = sprintf(
+            __('Problem acknowledged by %1$s on %2$s', 'ivertixmonitoring'),
+            (string)($acknowledgement["author_name"] ?? ''),
+            self::formatDate($acknowledgement["entry_time"] ?? null)
+        );
+        $comment = trim((string)($acknowledgement["comment"] ?? ""));
+        return $comment !== "" ? $text . " - " . $comment : $text;
+    }
+
+    /**
+     * Get the status name (UP, DOWN, ...) of a monitoring host, using one API request.
+     */
+    public function getHostStatus(int $hostId): ?string
+    {
+        if (!$this->api_client->authenticate()) {
+            return null;
+        }
+        $hostResources = $this->api_client->getHostResourceDetailById($hostId);
+        $status = $hostResources["success"] ? ($hostResources["result"]["status"]["name"] ?? null) : null;
+        return is_string($status) ? $status : null;
     }
 
     public function getTimeline(string $period): ?array
     {
-        if (!isset($this->fields["monitoring_id"])) {
+        if (!isset($this->fields["monitoring_id"]) || !$this->api_client->authenticate()) {
             return null;
         }
-        $api = $this->api_client;
-        $connected = $api->authenticate();
-        $timeline = [];
-        if ($connected === true) {
-            $hostTimelineById = $api->getHostTimelineById((int)$this->fields["monitoring_id"]);
-            if (!$hostTimelineById["success"]) {
-                return null;
-            }
-            $hostTimelineById = $hostTimelineById["result"]["result"];
-            foreach ($hostTimelineById as $event) {
-                if (!isset($event["status"]["name"])) {
-                    $event['status']['name'] = $event["type"];
-                }
-                $timeline[] = [
-                    'date' => self::transformDate($event['date']),
-                    'content' => $event['content'],
-                    'status' => $event['status']['name'],
-                    'tries' => $event['tries'] ?? "",
-                ];
-            }
-
-            $periodString = '';
-            switch ($period) {
-                case 'day':
-                    $periodString = '-1 day';
-                    break;
-                case 'week':
-                    $periodString = '-7 days';
-                    break;
-                case 'month':
-                    $periodString = '-1 month';
-                    break;
-            }
-            $dateEnd = date('Y-m-d', strtotime(date('Y-m-d') . $periodString));
-            $filteredTimeline = [];
-            foreach ($timeline as $event => $info) {
-                $setdate = self::transformDateForCompare($info['date']);
-                if ($setdate >= $dateEnd) {
-                    $filteredTimeline[$event] = $info;
-                }
-            }
-            return $filteredTimeline;
+        $response = $this->api_client->getHostTimelineById((int)$this->fields["monitoring_id"]);
+        if (!$response["success"]) {
+            return null;
         }
-        return null;
+        $minDate = new DateTimeImmutable(match ($period) {
+            'week' => 'today -7 days',
+            'month' => 'today -1 month',
+            default => 'today -1 day',
+        });
+
+        $timeline = [];
+        foreach (($response["result"]["result"] ?? []) as $event) {
+            $date = self::parseDate($event['date'] ?? null);
+            if ($date === null || $date < $minDate) {
+                continue;
+            }
+            $timeline[] = [
+                'date' => self::formatDate($event['date']),
+                'content' => (string)($event['content'] ?? ''),
+                'status' => (string)($event['status']['name'] ?? $event['type'] ?? ''),
+                'tries' => $event['tries'] ?? "",
+            ];
+        }
+        return $timeline;
     }
 
-    private static function transformDate($date)
+    /**
+     * Parse a date (ISO 8601 from the API or the browser), null when it is not valid.
+     */
+    public static function parseDate(mixed $date): ?DateTimeImmutable
     {
-        $timestamp = strtotime($date);
-        return date('l,F d,Y G:i:s', $timestamp);
+        if (!is_string($date) || $date === '') {
+            return null;
+        }
+        try {
+            return new DateTimeImmutable($date);
+        } catch (Exception) {
+            return null;
+        }
     }
 
-    private static function transformDateForCompare($date)
+    /**
+     * Format a date of the monitoring API with the timezone and date format of the current GLPI user.
+     */
+    private static function formatDate(?string $date): string
     {
-        $timestamp = strtotime($date);
-        return date('Y-m-d', $timestamp);
+        $dateTime = self::parseDate($date);
+        if ($dateTime === null) {
+            return (string)$date;
+        }
+        // GLPI sets the PHP default timezone to the timezone of the user
+        $dateTime = $dateTime->setTimezone(new DateTimeZone(date_default_timezone_get()));
+        return (string)Html::convDateTime($dateTime->format('Y-m-d H:i:s'));
     }
 
     public function sendHostCheck(): bool
     {
-        if (!isset($this->fields["monitoring_id"])) {
+        if (!isset($this->fields["monitoring_id"]) || !$this->api_client->authenticate()) {
             return false;
         }
-        $api = $this->api_client;
-        $connected = $api->authenticate();
-        if ($connected === true) {
-            $res = $api->sendHostCheck((int)$this->fields["monitoring_id"]);
-            return $res["success"];
-        }
-        return false;
+        return $this->api_client->sendHostCheck((int)$this->fields["monitoring_id"])["success"];
     }
 
-    public function setDowntime(string $startTime, string $endTime, bool $isFixed, ?array $duration, string $comment, bool $withServices): bool
+    /**
+     * @param DateTimeImmutable $start start of the downtime
+     * @param DateTimeImmutable $end end of the downtime
+     * @param bool $isFixed fixed downtime (from start to end), otherwise flexible with $duration
+     * @param int|null $duration duration of a flexible downtime in seconds
+     */
+    public function setDowntime(DateTimeImmutable $start, DateTimeImmutable $end, bool $isFixed, ?int $duration, string $comment, bool $withServices): bool
     {
-        if (!isset($this->fields["monitoring_id"])) {
+        if (!isset($this->fields["monitoring_id"]) || !$this->api_client->authenticate()) {
             return false;
         }
         $downtime = [
             "is_fixed" => $isFixed,
-            "start_time" => self::convertDateToIso8601($startTime),
-            "end_time" => self::convertDateToIso8601($endTime),
+            "start_time" => $start->format(DATE_ATOM),
+            "end_time" => $end->format(DATE_ATOM),
+            "duration" => $isFixed ? $end->getTimestamp() - $start->getTimestamp() : (int)$duration,
             "comment" => $comment,
-            "with_services" => $withServices
+            "with_services" => $withServices,
         ];
-        if ($isFixed) {
-            $downtime["duration"] = self::diffDateInSeconds($endTime, $startTime);
-        } else {
-            $downtime["duration"] = self::convertDuration($duration["unit"], $duration["value"]);
-        }
-        $api = $this->api_client;
-        $connected = $api->authenticate();
-        if ($connected === true) {
-            $res = $api->setHostDowntime((int)$this->fields["monitoring_id"], $downtime);
-            return $res["success"];
-        }
-        return false;
-    }
-
-    public static function convertDateToIso8601(string $date): string
-    {
-        $timezone = new DateTimeZone($_SESSION['glpi_tz'] ?? date_default_timezone_get());
-        return (new DateTime($date, $timezone))->format(DATE_ATOM);
-    }
-
-    public static function diffDateInSeconds($date1, $date2): float|int
-    {
-        $ts1 = strtotime($date1);
-        $ts2 = strtotime($date2);
-        return abs($ts2 - $ts1);
+        return $this->api_client->setHostDowntime((int)$this->fields["monitoring_id"], $downtime)["success"];
     }
 
     public static function convertDuration(string $unit, int $value): int
     {
-        switch ($unit) {
-            case "m":
-                return $value * 60;
-            case "h":
-                return $value * 3600;
-            default:
-                return $value;
-        }
+        return match ($unit) {
+            "m" => $value * 60,
+            "h" => $value * 3600,
+            default => $value,
+        };
     }
 
     public function cancelDowntime(int $downtimeId): bool
     {
-        if (!isset($this->fields["monitoring_id"])) {
+        if (!isset($this->fields["monitoring_id"]) || !$this->api_client->authenticate()) {
             return false;
         }
         $api = $this->api_client;
-        $connected = $api->authenticate();
-
-        if ($connected === true) {
-            $hostDowntime = $api->getDowntimeById($downtimeId);
-            if (!$hostDowntime["success"]) {
-                return false;
-            }
-            $hostDowntime = $hostDowntime["result"];
-            // check host id
-            if ((int)$this->fields["monitoring_id"] !== $hostDowntime["host_id"]) {
-                return false;
-            }
-
-            $hostId = $hostDowntime['host_id'];
-            $startTime = $hostDowntime['start_time'];
-            $endTime = $hostDowntime['end_time'];
-
-            $servicesDowntimes = $api->getServiceDowntimesByHostId($hostId, 200);
-            if ($servicesDowntimes["success"]) {
-                $servicesDowntimes = $servicesDowntimes["result"];
-                foreach ($servicesDowntimes['result'] as $serviceDowntime) {
-                    if (isset($serviceDowntime['start_time'], $serviceDowntime['end_time'])
-                        && $serviceDowntime['start_time'] === $startTime && $serviceDowntime['end_time'] === $endTime) {
-                        $api->cancelDowntimeById($serviceDowntime['id']);
-                    }
-                }
-            }
-            $res = $api->cancelDowntimeById($downtimeId);
-            return $res["success"];
+        $hostDowntime = $api->getDowntimeById($downtimeId);
+        if (!$hostDowntime["success"] || !isset($hostDowntime["result"]["host_id"])) {
+            return false;
+        }
+        $hostDowntime = $hostDowntime["result"];
+        // only downtimes of the linked host can be canceled
+        if ((int)$this->fields["monitoring_id"] !== (int)$hostDowntime["host_id"]) {
+            return false;
         }
 
-        return false;
+        // cancel the service downtimes that were set together with the host downtime
+        $servicesDowntimes = $api->getServiceDowntimesByHostId((int)$hostDowntime['host_id'], 200);
+        foreach (($servicesDowntimes["success"] ? ($servicesDowntimes["result"]["result"] ?? []) : []) as $serviceDowntime) {
+            if (
+                isset($serviceDowntime['id'], $serviceDowntime['start_time'], $serviceDowntime['end_time'])
+                && $serviceDowntime['start_time'] === ($hostDowntime['start_time'] ?? null)
+                && $serviceDowntime['end_time'] === ($hostDowntime['end_time'] ?? null)
+            ) {
+                $api->cancelDowntimeById((int)$serviceDowntime['id']);
+            }
+        }
+        return $api->cancelDowntimeById($downtimeId)["success"];
     }
 
     public function acknowledge(string $comment, bool $isNotifyContacts, bool $isPersistentComment, bool $isSticky, bool $withServices): bool
     {
-        if (!isset($this->fields["monitoring_id"])) {
+        if (!isset($this->fields["monitoring_id"]) || !$this->api_client->authenticate()) {
             return false;
         }
-        $api = $this->api_client;
-        $connected = $api->authenticate();
-        if ($connected === true) {
-            $res = $api->acknowledgeHostById((int)$this->fields["monitoring_id"], [
-                "comment" => $comment,
-                "is_notify_contacts" => $isNotifyContacts,
-                "is_persistent_comment" => $isPersistentComment,
-                "is_sticky" => $isSticky,
-                "with_services" => $withServices
-            ]);
-            return $res["success"];
-        }
-        return false;
+        return $this->api_client->acknowledgeHostById((int)$this->fields["monitoring_id"], [
+            "comment" => $comment,
+            "is_notify_contacts" => $isNotifyContacts,
+            "is_persistent_comment" => $isPersistentComment,
+            "is_sticky" => $isSticky,
+            "with_services" => $withServices,
+        ])["success"];
     }
 
-    public function linkItemToMonitoringHostByItemName(int $id, string $type): bool
+    /**
+     * Reject other methods than POST on endpoints that change data
+     * (GLPI only checks CSRF on POST, PUT, PATCH and DELETE requests).
+     *
+     * @throws HttpException
+     */
+    public static function checkPostRequest(): void
     {
-        // todo: temporary disabled / used on showForItem to auto-link
-        return false;
+        if (($_SERVER['REQUEST_METHOD'] ?? null) !== 'POST') {
+            throw new HttpException(405, "Method not allowed");
+        }
+    }
 
-        $item = getItemForItemtype($type);
-        $item->getFromDB($id);
-        $obj_name = $item->fields['name'];
-
-        $api = $this->api_client;
-        $connected = $api->authenticate();
-        if ($connected === true) {
-            $query = [
-                'search' => json_encode([
-                    'host.name' => [
-                        '$eq' => $obj_name,
-                    ],
-                ]),
-            ];
-            $match = $api->getHosts($query);
-        } else {
-            return false;
+    /**
+     * Read and validate the `itemtype` and `item_id` parameters of an ajax request, then check the plugin right and the
+     * user's right on the item (which also checks the entity).
+     *
+     * @param int $itemRight right required on the asset (READ or UPDATE)
+     * @param int $pluginRight plugin right required (READ, UPDATE or RIGHT_ACTION)
+     * @return array{0: string, 1: int} item type and item id
+     * @throws BadRequestHttpException
+     * @throws AccessDeniedHttpException
+     */
+    public static function getRequestedItem(int $itemRight, int $pluginRight): array
+    {
+        if (!Session::haveRight(self::$rightname, $pluginRight)) {
+            throw new AccessDeniedHttpException();
         }
 
-        if ($match["success"] && isset($match["result"]["result"][0])) {
-            $match = $match["result"]["result"][0];
-            if ($match['name'] === $obj_name) {
-                $monitoring_id = $match['id'];
-                $new_id = $this->add([
-                    'itemtype' => $type,
-                    'item_id' => $id,
-                    'monitoring_id' => $monitoring_id,
-                    'monitoring_type' => 'host',
-                ]);
-                $this->getFromDB($new_id);
+        $itemType = $_GET["itemtype"] ?? null;
+        $itemId = $_GET["item_id"] ?? null;
+        if (!is_string($itemType) || !in_array($itemType, self::LINKABLE_ITEMTYPES, true)) {
+            throw new BadRequestHttpException("Missing or invalid parameter: 'itemtype'");
+        }
+        if (!is_string($itemId) || !ctype_digit($itemId)) {
+            throw new BadRequestHttpException("Missing or invalid parameter: 'item_id'");
+        }
+        $itemId = (int)$itemId;
 
-                return true;
-            }
+        $item = getItemForItemtype($itemType);
+        if ($item === false || !$item->can($itemId, $itemRight)) {
+            throw new AccessDeniedHttpException();
         }
 
-        return false;
+        return [$itemType, $itemId];
+    }
+
+    /**
+     * Same as getRequestedItem(), then load the link of the requested item.
+     *
+     * @return self the loaded link
+     * @throws BadRequestHttpException
+     * @throws AccessDeniedHttpException
+     * @throws NotFoundHttpException when the item is not linked to a monitoring host
+     */
+    public static function getRequestedLink(int $itemRight, int $pluginRight): self
+    {
+        [$itemType, $itemId] = self::getRequestedItem($itemRight, $pluginRight);
+
+        $host = new self();
+        if (!$host->isItemLinked($itemId, $itemType)) {
+            throw new NotFoundHttpException("No linked monitoring host found for item");
+        }
+        return $host;
     }
 
     public function isItemLinked(int $id, string $type): bool
     {
-        if ($this->getFromDBByCrit(['item_id' => $id, 'itemtype' => $type])) {
-            return true;
-        }
-
-        return false;
+        return $this->getFromDBByCrit(['item_id' => $id, 'itemtype' => $type]);
     }
 
+    /**
+     * Whether the current user may link an asset to the given monitoring host: the host must not be linked to an asset
+     * the user cannot update (e.g. in another entity), as the actions and the note URL would affect that asset too.
+     */
+    public function canLinkMonitoringHost(int $hostId): bool
+    {
+        foreach ($this->find(['monitoring_id' => $hostId]) as $link) {
+            $item = getItemForItemtype($link['itemtype']);
+            if ($item === false || !$item->can((int)$link['item_id'], UPDATE)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Link an asset to a monitoring host, or remove the link when $hostId is null.
+     * When "Sync asset link to monitoring" is enabled, the note URL of the monitoring host is updated.
+     */
     public function linkItemToMonitoringHostByHostId(int $id, string $type, ?int $hostId): bool
     {
         global $CFG_GLPI;
 
         $config = Config::getConfig();
         $item = getItemForItemtype($type);
+        if ($item === false) {
+            return false;
+        }
 
         if ($this->isItemLinked($id, $type)) {
             $oldHostId = (int)$this->fields["monitoring_id"];
-            // currently linked host id is same as host id to link - return
             if ($oldHostId === $hostId) {
-                return false;
+                // already linked to this host
+                return true;
             }
-            // item is already linked, remove link
             $this->deleteByCriteria(['item_id' => $id, 'itemtype' => $type]);
-            // when sync to monitoring is enabled -> remove old note url
             if ($config["monitoring-sync"] === "1") {
-                $this->api_client->updateHost($oldHostId, ["json" => [
-                    "note_url" => null
-                ]]);
+                $this->api_client->updateHost($oldHostId, ["note_url" => null]);
             }
         }
-        // return true when host is not to link
         if ($hostId === null) {
             return true;
         }
-        $newId = $this->add(
-            [
-                'itemtype' => $type,
-                'item_id' => $id,
-                'monitoring_id' => $hostId,
-                'monitoring_type' => 'host',
-            ]
-        );
-        // set note url to new linked monitoring host
-        if (is_int($newId)) {
-            $this->getFromDB($newId);
-            if ($config["monitoring-sync"] === "1") {
-                $url = substr($item::getFormURLWithID($id), 1);
-                $this->api_client->updateHost($hostId, ["json" => [
-                    "note_url" => $CFG_GLPI['url_base'] . "/" . $url
-                ]]);
-            }
-            return true;
+        $newId = $this->add([
+            'itemtype' => $type,
+            'item_id' => $id,
+            'monitoring_id' => $hostId,
+            'monitoring_type' => 'host',
+        ]);
+        if (!is_int($newId) || $newId <= 0) {
+            return false;
         }
-
-        return false;
+        $this->getFromDB($newId);
+        if ($config["monitoring-sync"] === "1") {
+            $url = substr($item::getFormURLWithID($id), 1);
+            $this->api_client->updateHost($hostId, ["note_url" => $CFG_GLPI['url_base'] . "/" . $url]);
+        }
+        return true;
     }
 
+    /**
+     * Link all assets (not deleted, no templates) without link to the monitoring host with the same name.
+     * When "Sync asset link to monitoring" is enabled, the note URL of all linked monitoring hosts is updated.
+     *
+     * @return int number of new links
+     */
     public static function linkAll(): int
     {
         global $CFG_GLPI;
@@ -486,70 +609,48 @@ class Host extends CommonDBTM
             return 0;
         }
 
-        $cnt = 0;
-        $obj = [new Computer(), new NetworkEquipment()];
-
-        // load monitoring hosts
         $hosts = $self->getHostListByHostId();
-        $hostHashByName = [];
+        $hostByName = [];
         foreach ($hosts as $host) {
-            $hostHashByName[$host["name"]] = $host;
+            $hostByName[$host["name"]] = $host;
         }
 
-        // get currently linked
-        $currentLinks = $self->find();
-        $linkHash = [];
-        $linkHashByHostId = [];
-        foreach ($currentLinks as $link) {
-            $linkHash[$link["itemtype"]][$link["item_id"]] = $link;
-            $linkHashByHostId[$link["monitoring_id"]] = $link;
+        $linkByItem = [];
+        $linkByHostId = [];
+        foreach ($self->find() as $link) {
+            $linkByItem[$link["itemtype"]][$link["item_id"]] = $link;
+            $linkByHostId[$link["monitoring_id"]] = $link;
         }
 
-        $assetsArr = [];
-        foreach ($obj as $o) {
-            $assetsArr[] = $o->find(["is_deleted" => 0]);
-        }
-
-        foreach ($assetsArr as $index => $assets) {
+        $cnt = 0;
+        foreach (self::LINKABLE_ITEMTYPES as $itemtype) {
+            $assets = (new $itemtype())->find(["is_deleted" => 0, "is_template" => 0]);
             foreach ($assets as $asset) {
-                // check if already linked
-                if (isset($linkHash[$obj[$index]->getType()][$asset["id"]])) {
+                $host = $hostByName[$asset["name"]] ?? null;
+                if ($host === null || isset($linkByItem[$itemtype][$asset["id"]])) {
                     continue;
                 }
-
-                // check if monitoring host is available
-                $host = $hostHashByName[$asset["name"]] ?? null;
-                if (isset($host)) {
-                    $link = [
-                        "itemtype" => $obj[$index]->getType(),
-                        "item_id" => $asset["id"],
-                        "monitoring_id" => $host["id"],
-                        "monitoring_name" => $host["name"]
-                    ];
-                    $self->add($link);
-                    $linkHashByHostId[$host["id"]] = $link;
-                    $linkHash[$obj[$index]->getType()][$asset["id"]] = $link;
+                $link = [
+                    "itemtype" => $itemtype,
+                    "item_id" => $asset["id"],
+                    "monitoring_id" => $host["id"],
+                    "monitoring_type" => "host",
+                ];
+                if ($self->add($link)) {
+                    $linkByHostId[$host["id"]] = $link;
+                    $linkByItem[$itemtype][$asset["id"]] = $link;
                     $cnt++;
                 }
             }
         }
 
-        $config = Config::getConfig();
-        if ($config["monitoring-sync"] === "1") {
+        if (Config::getConfig()["monitoring-sync"] === "1") {
             foreach ($hosts as $host) {
-                $link = $linkHashByHostId[$host["id"]] ?? null;
-                if (isset($link)) {
-                    // host is linked - update notes url
-                    $item = getItemForItemtype($link["itemtype"]);
-                    if ($item !== false) {
-                        $url = substr($item::getFormURLWithID($link["item_id"]), 1);
-                        $self->api_client->updateHost($host["id"], ["json" => [
-                            "note_url" => $CFG_GLPI['url_base'] . "/" . $url
-                        ]]);
-                    }
-                } else {
-                    // host is not linked
-                    continue;
+                $link = $linkByHostId[$host["id"]] ?? null;
+                $item = $link !== null ? getItemForItemtype($link["itemtype"]) : false;
+                if ($item !== false) {
+                    $url = substr($item::getFormURLWithID($link["item_id"]), 1);
+                    $self->api_client->updateHost($host["id"], ["note_url" => $CFG_GLPI['url_base'] . "/" . $url]);
                 }
             }
         }
@@ -559,109 +660,95 @@ class Host extends CommonDBTM
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
     {
-        if ($item instanceof CommonDBTM) {
-            $nb = countElementsInTable(
-                self::getTable(),
-                [
-                    'item_id' => $item->getID(),
-                    'itemtype' => $item->getType(),
-                ],
-            );
-
-            return self::createTabEntry(
-                self::getTypeName($nb),
-                $nb,
-                $item::getType(),
-                'ti ti-heart-rate-monitor'
-            );
+        if (!($item instanceof CommonDBTM) || !self::canView()) {
+            return '';
         }
-
-        return '';
+        $nb = countElementsInTable(self::getTable(), [
+            'item_id' => $item->getID(),
+            'itemtype' => $item->getType(),
+        ]);
+        return self::createTabEntry(self::getTypeName($nb), $nb, $item::getType(), self::getIcon());
     }
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
-        if ($item instanceof CommonDBTM) {
-            self::showForItem($item, $withtemplate);
+        if ($item instanceof CommonDBTM && self::canView()) {
+            self::showForItem($item);
         }
-
         return true;
     }
 
-    public static function showForItem(CommonDBTM $item, $withtemplate = 0)
+    public static function showForItem(CommonDBTM $item): void
     {
         global $CFG_GLPI;
 
         $self = new self();
         $item_id = $item->getID();
         $item_type = $item->getType();
-        // check api
+
         $user = $self->api_client->getAuthUser();
         if ($user === null) {
             TemplateRenderer::getInstance()->display('@ivertixmonitoring/noconnection.html.twig');
-        } else {
-            $alreadyLinked = $self->isItemLinked($item_id, $item_type) || $self->linkItemToMonitoringHostByItemName($item_id, $item_type);
-
-            if ($alreadyLinked) {
-                // get monitoring host id and name
-                $hostItem = $self->getHostListItem();
-            } else {
-                $hostItem = null;
-            }
-
-            // render host select
-            $rand = mt_rand();
-            $hostDropdownId = Html::cleanId("dropdown_monitoring_host") . $rand;
-            $hostDropdown = Html::jsAjaxDropdown(
-                "monitoring_host",
-                $hostDropdownId,
-                $CFG_GLPI["root_doc"] . "/plugins/ivertixmonitoring/ajax/hostlist.php",
-                [
-                    "value" => $hostItem ? $hostItem["id"] : 0,
-                    "valuename" => $hostItem ? $hostItem["name"] : Dropdown::EMPTY_VALUE,
-                    'on_change' => "onHostChange$rand(this.value)",
-                    'placeholder' => "Linked Monitoring Host"
-                ]
-            );
-            TemplateRenderer::getInstance()->display('@ivertixmonitoring/selecthost.html.twig', [
-                'host_dropdown' => $hostDropdown,
-                'host_dropdown_id' => $hostDropdownId,
-                'rand' => $rand,
-                'itemtype' => $item_type,
-                'item_id' => $item_id
-            ]);
-            if ($alreadyLinked) {
-                $hostDetail = $self->getHostDetail();
-                if (empty($hostDetail)) {
-                    // when one host is empty, linked host probably does not exist anymore
-                    TemplateRenderer::getInstance()->display('@ivertixmonitoring/invalidhost.html.twig');
-                } else {
-                    TemplateRenderer::getInstance()->display('@ivertixmonitoring/host.html.twig', [
-                        'item_id' => $item_id,
-                        'itemtype' => $item_type,
-                        'host' => $hostDetail,
-                        'user_name' => $user["alias"],
-                        'logo' => $CFG_GLPI['root_doc'] . '/plugins/ivertixmonitoring/images/logo-ivertix.png',
-                    ]);
-                }
-            } else {
-                TemplateRenderer::getInstance()->display('@ivertixmonitoring/nohost.html.twig');
-            }
+            return;
         }
+
+        $linked = $self->isItemLinked($item_id, $item_type);
+        $hostItem = $linked ? $self->getHostListItem() : null;
+        $canLink = self::canUpdate() && $item->can($item_id, UPDATE);
+
+        $rand = mt_rand();
+        $hostDropdownId = Html::cleanId("dropdown_monitoring_host") . $rand;
+        $hostDropdown = $canLink ? Html::jsAjaxDropdown(
+            "monitoring_host",
+            $hostDropdownId,
+            $CFG_GLPI["root_doc"] . "/plugins/ivertixmonitoring/ajax/hostlist.php",
+            [
+                "value" => $hostItem ? $hostItem["id"] : 0,
+                "valuename" => $hostItem ? $hostItem["name"] : Dropdown::EMPTY_VALUE,
+                'on_change' => "onHostChange$rand(this.value)",
+                'placeholder' => __('Linked monitoring host', 'ivertixmonitoring'),
+            ]
+        ) : '';
+        TemplateRenderer::getInstance()->display('@ivertixmonitoring/selecthost.html.twig', [
+            'can_link' => $canLink,
+            'host_dropdown' => $hostDropdown,
+            'host_dropdown_id' => $hostDropdownId,
+            'host_name' => $hostItem["name"] ?? null,
+            'rand' => $rand,
+            'linked_host_id' => $hostItem ? (int)$hostItem["id"] : 0,
+            'itemtype' => $item_type,
+            'item_id' => $item_id,
+        ]);
+
+        if (!$linked) {
+            TemplateRenderer::getInstance()->display('@ivertixmonitoring/nohost.html.twig');
+            return;
+        }
+        $hostDetail = $self->getHostDetail();
+        if (empty($hostDetail)) {
+            // the linked host probably does not exist anymore
+            TemplateRenderer::getInstance()->display('@ivertixmonitoring/invalidhost.html.twig');
+            return;
+        }
+        TemplateRenderer::getInstance()->display('@ivertixmonitoring/host.html.twig', [
+            'item_id' => $item_id,
+            'itemtype' => $item_type,
+            'host' => $hostDetail,
+            'can_act' => self::canRunActions(),
+            'user_name' => $user["alias"],
+            'status_labels' => self::getStatusLabels(),
+            'logo' => $CFG_GLPI['root_doc'] . '/plugins/ivertixmonitoring/images/logo-ivertix.png',
+        ]);
     }
 
     public static function getSpecificValueToDisplay($field, $values, array $options = [])
     {
-        switch ($field) {
-            case 'id':
-                if ((int)$values['id'] > 0) {
-                    $self = new self();
-                    $self->getFromDB((int)$values["id"]);
-                    $res = $self->getHostDetail();
-
-                    return $res['status'] ?? '';
-                }
-                break;
+        if ($field === 'id') {
+            if (!self::canView() || !is_numeric($values['monitoring_id'] ?? null)) {
+                return '';
+            }
+            $status = (new self())->getHostStatus((int)$values['monitoring_id']);
+            return $status !== null ? htmlescape(self::getStatusLabel($status)) : '';
         }
 
         return parent::getSpecificValueToDisplay($field, $values, $options);
